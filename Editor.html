@@ -1,0 +1,2908 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>비주얼 노벨 대사·리소스 편집기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --ws:#2D3548; --ws-dot:rgba(255,255,255,.08);
+  --panel:#E7EBF1; --card:#FFFFFF; --ink:#1D2331; --muted:#5D6678; --rule:#C8CFDB;
+  --accent:#3E7BFA; --accent-soft:rgba(62,123,250,.16);
+  --err:#E5484D; --warn:#F2A33A;
+  --t-line:#FFFFFF; --t-choice:#FFE58F; --t-flag:#C9C0EC; --t-cond:#A6DDEE; --t-end:#C5E86C;
+  --edge:#12151C; --edge-flag:#7A5FD0;
+  --font:'Noto Sans KR', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --panel:#1C212D; --card:#262C3A; --ink:#E7EAF0; --muted:#9BA4B6; --rule:#394155;
+  }
+}
+:root[data-theme="dark"]{ color-scheme: dark; --panel:#1C212D; --card:#262C3A; --ink:#E7EAF0; --muted:#9BA4B6; --rule:#394155; }
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:var(--font);color:var(--ink);background:var(--panel);display:flex;flex-direction:column;overflow:hidden;font-size:13px}
+button,input,select,textarea{font-family:var(--font);font-size:13px;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- workspace ---------- */
+#ws{container-type:inline-size;position:relative;flex:1;min-width:0;background-color:var(--ws);
+  background-image:radial-gradient(var(--ws-dot) 1.4px, transparent 1.4px);overflow:hidden;touch-action:none;user-select:none}
+#ws.panning,#ws.space{cursor:grab}
+#ws.panning{cursor:grabbing}
+#ws.linking{cursor:crosshair}
+#world{position:absolute;left:0;top:0;transform-origin:0 0}
+#edges{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+#edges .hit{stroke:transparent;stroke-width:16;fill:none;pointer-events:stroke;cursor:pointer}
+#edges .halo{fill:none;stroke:rgba(255,255,255,.6);stroke-width:4.4}
+#edges .line{fill:none;stroke:var(--edge);stroke-width:2.8}
+#edges .eg.flagline .line{stroke:var(--edge-flag);stroke-width:3}
+#edges .eg.flagline .halo{stroke:rgba(255,255,255,.85);stroke-width:5.2}
+#edges .eg.sel .halo{stroke:var(--accent);stroke-width:8}
+#edges .ep{fill:#fff;stroke:var(--accent);stroke-width:2.5;opacity:0;pointer-events:all;cursor:grab}
+#edges .eg:hover .ep,#edges .eg.sel .ep{opacity:1}
+#edges .ref{fill:none;stroke:var(--edge-flag);stroke-width:2;stroke-dasharray:6 6;opacity:.9}
+#edges .reflabel{fill:#fff;font-size:12px;font-weight:500;paint-order:stroke;stroke:var(--edge-flag);stroke-width:4px}
+#edges .tmp{fill:none;stroke:var(--accent);stroke-width:2.6;stroke-dasharray:7 5}
+
+#marquee{position:absolute;border:1.5px solid #3E7BFA;background:rgba(62,123,250,.18);pointer-events:none;display:none}
+
+/* ---------- block ---------- */
+.block{position:absolute;width:340px;border:2px solid #1D2331;border-radius:10px;padding:12px 14px 12px 12px;
+  display:flex;gap:12px;color:#1D2331;cursor:move;background:var(--t-line)}
+.block.t-choice{background:var(--t-choice)} .block.t-flag{background:var(--t-flag)}
+.block.t-cond{background:var(--t-cond)} .block.t-end{background:var(--t-end)}
+.block.rim{border-color:var(--accent);cursor:crosshair}
+.block.sel{outline:3px solid var(--accent);outline-offset:3px}
+.block.target{outline:3px dashed var(--accent);outline-offset:4px}
+.block.has-warn{border-color:var(--warn);border-width:3px}
+.block.has-err{border-color:var(--err);border-width:3px}
+.block .tag{position:absolute;left:-2px;bottom:calc(100% + 6px);display:flex;gap:6px;pointer-events:none}
+.block .tag span{font-size:11.5px;font-weight:500;padding:2px 8px;border-radius:6px;background:#1D2331;color:#fff;white-space:nowrap}
+.block .tag span.f{background:var(--edge-flag)} .block .tag span.s{background:var(--accent)}
+.block .tag span.ok{background:#2E9E5B} .block .tag span.r{background:#2C8FB0}
+.block .badge{position:absolute;right:-10px;top:-10px;width:22px;height:22px;border-radius:50%;background:var(--err);color:#fff;
+  font-weight:700;display:none;align-items:center;justify-content:center;font-size:13px;cursor:help}
+.block.has-warn .badge{display:flex;background:var(--warn)} .block.has-err .badge{display:flex;background:var(--err)}
+.pf{flex:none;width:64px;height:64px;border-radius:9px;border:2px solid #1D2331;background:#C3C8D2;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.pf img{width:100%;height:100%;object-fit:cover;object-position:50% 8%;display:block}
+.pf svg{width:38px;height:38px;fill:#8E95A3}
+.pf[disabled]{cursor:default}
+.pf .end-mark{font-weight:700;font-size:14px;color:#1D2331}
+.bbody{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
+.brow{display:flex;align-items:center;gap:6px}
+.nm{flex:1;min-width:0;border:2px solid #1D2331;border-radius:7px;padding:2px 10px;font-weight:700;font-size:13px;background:rgba(255,255,255,.6);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.nm.ro{cursor:default;font-weight:500}
+.ib{flex:none;width:30px;height:30px;border:2px solid #1D2331;border-radius:8px;background:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;padding:0}
+.ib.emo{border-radius:50%;font-size:17px;line-height:1}
+.ib:hover,.nm:hover:not(.ro){background:#fff}
+.txt{width:100%;border:none;background:transparent;resize:none;padding:2px 0;line-height:1.55;font-size:13.5px;color:#1D2331;min-height:24px;overflow:hidden;pointer-events:none;user-select:none}
+.block.editing .txt{pointer-events:auto;cursor:text;user-select:text}
+.block.editing{cursor:default}
+.txt::placeholder{color:rgba(29,35,49,.45)}
+.tcount{display:none;text-align:right;font-size:11px;color:rgba(29,35,49,.55);margin-top:2px}
+.block.editing .tcount:not(:empty){display:block}
+.tcount.over{display:block;color:#C0392B;font-weight:700}
+.txt:focus{outline:none;background:rgba(255,255,255,.55);border-radius:6px}
+.linkbtn{position:absolute;right:-28px;top:-2px;bottom:-2px;width:26px;border:2px solid #1D2331;border-left:none;border-radius:0 8px 8px 0;
+  background:var(--t-flag);font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;color:#1D2331}
+.linkbtn:hover{background:#B5A9E4}
+.linking .linkbtn.active{background:var(--accent);color:#fff}
+
+/* ---------- workspace chrome ---------- */
+#toolbar{position:absolute;left:14px;top:14px;right:14px;display:flex;align-items:center;gap:8px;pointer-events:none}
+#toolbar > *{pointer-events:auto}
+.tb{height:34px;padding:0 13px;border-radius:8px;border:none;background:#E9EDF4;color:#1D2331;font-weight:500;white-space:nowrap;flex:none}
+.tb:hover{background:#fff}
+.tb.primary{background:var(--accent);color:#fff}
+#title{height:34px;border-radius:8px;border:none;background:rgba(255,255,255,.08);color:#fff;padding:0 12px;font-weight:700;flex:0 1 220px;min-width:80px;width:220px}
+#title:focus{background:rgba(255,255,255,.16);outline:none}
+#zoomlbl{color:#C9D0DE;min-width:46px;text-align:center;font-variant-numeric:tabular-nums}
+.spacer{flex:1}
+#legend{position:absolute;left:14px;bottom:14px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:rgba(18,22,32,.55);
+  color:#E3E7EF;padding:8px 12px;border-radius:10px;font-size:12px;pointer-events:none}
+#legend i{display:inline-block;width:14px;height:14px;border-radius:4px;border:1.5px solid #1D2331;vertical-align:-2px;margin-right:5px}
+#legend b{display:inline-block;width:22px;height:0;border-top:3px solid;vertical-align:3px;margin-right:5px}
+#hint{position:absolute;right:14px;bottom:14px;max-width:380px;color:#AEB6C6;font-size:12px;text-align:right;line-height:1.6;pointer-events:none}
+#ws:focus{outline:none}
+@container (max-width:1000px){#hint{display:none}}
+@container (max-width:760px){#zoomlbl,#zoomOut,#zoomIn{display:none}}
+#banner{position:absolute;left:50%;top:60px;transform:translateX(-50%);background:var(--edge-flag);color:#fff;padding:8px 16px;border-radius:8px;font-weight:500;display:none}
+#toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1D2331;color:#fff;padding:9px 16px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
+#toast.on{opacity:1}
+
+/* ---------- popovers ---------- */
+#pop{position:fixed;z-index:40;display:none;background:var(--card);color:var(--ink);border:1.5px solid var(--rule);border-radius:12px;padding:6px}
+.menu-item{display:flex;align-items:center;gap:10px;width:100%;border:none;background:none;text-align:left;padding:8px 12px 8px 8px;border-radius:8px}
+.menu-item:hover,.menu-item.cur{background:var(--accent-soft)}
+.menu-item:disabled{opacity:.45;cursor:default;background:none}
+.menu-item i{width:16px;height:16px;border-radius:5px;border:1.5px solid #1D2331;flex:none}
+.menu-item img,.menu-item .ph{width:28px;height:28px;border-radius:6px;object-fit:cover;object-position:50% 8%;flex:none;background:#C3C8D2}
+.emo-grid{width:150px;height:225px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:6px;padding:4px}
+.emo-grid button{border:none;border-radius:12px;background:var(--panel);font-size:30px;line-height:1}
+.emo-grid button:hover{background:var(--accent-soft)}
+.emo-grid button.cur{outline:2.5px solid var(--accent)}
+
+/* ---------- side panel ---------- */
+#panel{width:372px;flex:none;height:100%;overflow-y:auto;background:var(--panel);border-left:1px solid var(--rule);padding:14px 14px 40px}
+#panel details{background:var(--card);border-radius:10px;margin-bottom:10px;border:1px solid var(--rule)}
+#panel summary{list-style:none;cursor:pointer;padding:12px 14px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
+#panel summary::-webkit-details-marker{display:none}
+#panel summary::before{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s}
+#panel details[open] > summary::before{transform:rotate(45deg)}
+#panel summary .cnt{margin-left:auto;font-weight:500;color:var(--muted);font-size:12px}
+.sec{padding:0 14px 14px;display:flex;flex-direction:column;gap:8px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field > span{font-size:12px;color:var(--muted)}
+.in{width:100%;height:32px;border:1.5px solid var(--rule);border-radius:7px;background:var(--card);padding:0 9px}
+textarea.in{height:auto;min-height:56px;padding:6px 9px;resize:vertical}
+.in:focus{border-color:var(--accent);outline:none}
+.in.mono{font-family:var(--font);letter-spacing:.01em}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{height:32px;border-radius:7px;border:1.5px solid var(--rule);background:var(--card);padding:0 12px;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{color:var(--err)}
+.btn.small{height:28px;padding:0 10px;font-size:12px}
+.btn.wide{width:100%}
+.char{display:grid;grid-template-columns:52px 1fr 26px;gap:8px;align-items:start;padding:8px;border:1.5px solid var(--rule);border-radius:9px}
+.char .thumb{width:52px;height:52px;border-radius:8px;border:1.5px solid var(--rule);background:#C3C8D2;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.char .thumb img{width:100%;height:100%;object-fit:cover}
+.char .thumb svg{width:30px;height:30px;fill:#8E95A3}
+.char .meta{display:flex;flex-direction:column;gap:5px}
+.char .meta .in{height:28px}
+.char label.pl{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.x{width:26px;height:26px;border:none;background:none;border-radius:6px;color:var(--muted);font-size:16px;padding:0}
+.x:hover{background:var(--accent-soft);color:var(--err)}
+.kv{display:grid;grid-template-columns:1fr 1fr 26px;gap:6px;align-items:center}
+.kv .in{height:28px}
+.sub{font-size:12px;font-weight:700;color:var(--muted);margin-top:4px}
+.empty{color:var(--muted);font-size:12.5px;line-height:1.6}
+.issue{display:flex;gap:8px;align-items:flex-start;width:100%;text-align:left;border:none;background:none;padding:6px 8px;border-radius:7px;line-height:1.5}
+.issue:hover{background:var(--accent-soft)}
+.issue i{flex:none;width:9px;height:9px;border-radius:50%;margin-top:6px;background:var(--err)}
+.issue.warn i{background:var(--warn)}
+.ok{color:#2E9E5B;font-weight:500}
+.note{font-size:12px;color:var(--muted);line-height:1.6}
+/* toolbar group */
+.tbg{display:flex;gap:2px;background:#E9EDF4;border-radius:8px;padding:0}
+.tbg .tb{background:transparent}
+.tbg .tb:hover:not(:disabled){background:#fff}
+.tb:disabled{opacity:.4;cursor:default}
+.tb .car{font-size:10px;margin-left:6px}
+/* modal */
+#modal{position:fixed;inset:0;background:rgba(14,18,28,.5);display:none;align-items:center;justify-content:center;z-index:60}
+#modal .box{width:min(440px,calc(100vw - 32px));background:var(--card);color:var(--ink);border-radius:16px;padding:22px 22px 18px;display:flex;flex-direction:column;gap:12px}
+#modal h2{margin:0;font-size:17px}
+#modal p{margin:0;line-height:1.65;color:var(--muted)}
+#modal ul{margin:0;padding-left:18px;line-height:1.6;max-height:220px;overflow:auto;font-size:12.5px}
+#modal .chk{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted)}
+#modal .mrow{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+.menu-item small{display:block;color:var(--muted);font-size:11.5px;margin-top:1px}
+.chk2{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted)}
+
+/* ---------- tab bar ---------- */
+#tabbar{flex:none;height:48px;display:flex;align-items:stretch;gap:8px;padding:0 12px;background:var(--panel);border-bottom:1px solid var(--rule)}
+#tabbar .tabs{display:flex;align-items:stretch;gap:2px}
+.tab{position:relative;border:none;background:none;padding:0 16px;font-size:14px;font-weight:500;color:var(--muted)}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--ink);font-weight:700}
+.tab.on::after{content:"";position:absolute;left:10px;right:10px;bottom:0;height:3px;border-radius:3px 3px 0 0;background:var(--accent)}
+#tabbar .acts{display:flex;align-items:center;gap:6px}
+.tb2{height:32px;padding:0 12px;border-radius:7px;border:1.5px solid var(--rule);background:var(--card);font-weight:500;white-space:nowrap}
+.tb2:hover{border-color:var(--accent)}
+.tb2 .car{font-size:10px;margin-left:6px}
+.folder{display:flex;align-items:center;gap:8px;max-width:280px}
+.folder .dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.folder.ok .dot{background:#2E9E5B} .folder.pending .dot{background:var(--warn)}
+.folder span:last-child{overflow:hidden;text-overflow:ellipsis}
+#tabbar .sep{width:1px;background:var(--rule);margin:10px 4px}
+
+/* ---------- views ---------- */
+#views{flex:1;min-height:0;position:relative}
+.view{position:absolute;inset:0;display:none}
+.view.on{display:flex}
+#v-dialog{flex-direction:row}
+.page{flex-direction:column;overflow-y:auto;background:var(--ws);background-image:radial-gradient(var(--ws-dot) 1.4px, transparent 1.4px);background-size:22px 22px;padding:22px 28px 60px}
+.phead{display:flex;align-items:flex-end;gap:16px;max-width:1240px;width:100%;margin:0 auto 18px}
+.phead h1{margin:0 0 4px;font-size:20px;color:#fff}
+.phead p{margin:0;color:#AEB6C6;font-size:12.5px;line-height:1.6}
+.phead .spacer{flex:1}
+.pbody{max-width:1240px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.page .empty-big{color:#AEB6C6;text-align:center;padding:60px 0;line-height:1.7}
+
+/* 이름 라벨 (한글/English) */
+.nmlabel{border:none;background:none;padding:3px 8px;margin-left:-8px;border-radius:7px;font-size:15px;font-weight:700;color:var(--ink);text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.nmlabel span{font-weight:500;color:var(--muted)}
+.nmlabel:hover{background:var(--accent-soft)}
+.nmedit{height:30px;border:1.5px solid var(--accent);border-radius:7px;background:var(--card);padding:0 9px;font-weight:700;font-size:14px;width:240px;max-width:100%}
+.nmedit:focus{outline:none}
+.pathtxt{font-size:12px;color:var(--muted)}
+.miss{font-size:11.5px;color:var(--warn);font-weight:500}
+
+/* ---------- 캐릭터 ---------- */
+.cset{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:14px 16px 16px}
+.chead{display:flex;align-items:center;gap:12px;margin-bottom:12px;min-height:30px}
+.chead .plr{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted);cursor:pointer}
+.chead .spacer{flex:1}
+.slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.slot{position:relative;aspect-ratio:16/9;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel);overflow:hidden;cursor:pointer}
+.slot:hover{border-color:var(--accent)}
+.slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.slot .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.slot .ph svg{height:62%;width:auto;fill:var(--rule)}
+.slot .guide{position:absolute;left:3.75%;right:3.75%;top:61.7%;bottom:5%;border:1.5px dashed rgba(120,130,150,.55);border-radius:3px;pointer-events:none;z-index:1}
+.slot .guide span{position:absolute;right:6px;top:4px;font-size:10.5px;color:var(--muted)}
+.slot .slab{position:absolute;left:6px;top:6px;padding:2px 8px;border-radius:6px;background:rgba(29,35,49,.78);color:#fff;font-size:12px;font-weight:500;z-index:1}
+.slot .pick{position:absolute;right:6px;bottom:6px;z-index:1}
+.slot .sz{position:absolute;left:6px;bottom:8px;font-size:11px;color:var(--muted);z-index:1;background:var(--card);padding:1px 6px;border-radius:5px}
+.slot .sz.bad{color:var(--warn);font-weight:700}
+.narr{padding:16px;border-radius:8px;background:var(--panel);color:var(--muted);font-size:12.5px;line-height:1.6}
+
+/* ---------- 배경 ---------- */
+.bggrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.bgcard{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.bghead{display:flex;align-items:center;gap:6px;min-height:30px}
+.bghead .spacer{flex:1}
+.bgimg{position:relative;aspect-ratio:16/9;border-radius:8px;border:1.5px solid var(--rule);background:var(--panel);overflow:hidden;cursor:pointer;padding:0;width:100%}
+.bgimg:hover{border-color:var(--accent)}
+.bgimg img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.bgimg .ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--muted);font-size:12.5px}
+.bgimg .ph b{font-size:22px;font-weight:500;color:var(--rule)}
+.bgfoot{display:flex;align-items:center;gap:8px}
+.bgfoot .spacer{flex:1}
+
+/* ---------- 사운드 ---------- */
+#v-sound .pbody{flex:1;min-height:0}
+.sndcols{display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;min-height:420px}
+.sndcol{background:var(--card);border:1px solid var(--rule);border-radius:10px;display:flex;flex-direction:column;min-height:0;max-height:calc(100vh - 210px)}
+.sndhead{display:flex;align-items:center;gap:10px;padding:14px 16px 10px}
+.sndhead b{font-size:15px}
+.sndhead small{color:var(--muted);font-size:12px}
+.sndhead .spacer{flex:1}
+.sndgrid{flex:1;overflow-y:auto;padding:4px 16px 16px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-content:start}
+.snd{aspect-ratio:1;border:1.5px solid var(--rule);border-radius:8px;background:var(--panel);display:flex;flex-direction:column;align-items:center;padding:6px 6px 6px;gap:4px;min-width:0}
+.snd .nmlabel{font-size:12px;margin:0;padding:2px 5px;max-width:100%}
+.snd .nmedit{width:100%;height:26px;font-size:12px}
+.snd .disc{flex:1;min-height:0;aspect-ratio:1;border-radius:50%;border:2px solid var(--rule);background:var(--card);display:flex;align-items:center;justify-content:center;padding:0}
+.snd .disc:hover{border-color:var(--accent)}
+.snd .disc svg{width:46%;height:46%;fill:var(--muted)}
+.snd.has .disc svg{fill:var(--accent)}
+.snd .row{display:flex;align-items:center;gap:2px;width:100%}
+.snd .row .spacer{flex:1}
+.snd .mini{width:24px;height:24px;border:none;background:none;border-radius:6px;padding:0;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center}
+.snd .mini:hover{background:var(--accent-soft);color:var(--ink)}
+.snd .mini.on{color:var(--accent)}
+.snd .mini:disabled{opacity:.35;cursor:default;background:none}
+.snd .st{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.snd .st.miss{color:var(--warn)}
+
+/* ---------- UI ---------- */
+.uiwrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+.stagebox{display:flex;flex-direction:column;gap:8px}
+.stagebox .cap{color:#C9D0DE;font-size:12.5px;font-weight:500}
+.sw{position:relative;width:100%;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#3A3F47}
+.sw .stage{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;font-family:var(--font);color:#E8EAED}
+.stage .gbg{position:absolute;inset:0;background:#4A5059}
+.stage .gbg span{position:absolute;left:24px;top:24px;font-size:18px;color:rgba(255,255,255,.4)}
+.stage .gch{position:absolute;left:50%;bottom:0;width:420px;height:600px;transform:translateX(-50%);background:rgba(255,255,255,.08);border-radius:200px 200px 0 0}
+.stage .layer{position:absolute;inset:0}
+.uel{position:absolute;background-size:100% 100%;background-repeat:no-repeat;background-position:center}
+.u-dialog{background-color:rgba(28,30,33,.92)}
+.u-dtext{white-space:pre-wrap;word-break:keep-all;overflow:hidden;font-weight:400;outline:2px dashed rgba(255,255,255,.18);outline-offset:-2px}
+.u-name{background-color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 20px;white-space:nowrap}
+.u-name.u-skin{background:none !important;padding:0 28px}
+.u-name .nb{position:absolute;top:0;bottom:0;display:none;background-image:var(--nb-img);background-repeat:no-repeat}
+.u-name.u-skin .nb{display:block}
+.u-name .nb-l{left:0;width:21px;z-index:1;background-size:calc(20px / 0.12) 100%;background-position:left top}
+.u-name .nb-r{right:0;width:21px;z-index:1;background-size:calc(20px / 0.12) 100%;background-position:right top}
+.u-name .nb-m{left:19px;right:19px;z-index:0;background-size:calc(100% / 0.76) 100%;background-position:50% top}
+.u-name .nbt{position:relative;z-index:2}
+.u-choices{position:absolute;display:flex;flex-direction:column;gap:10px}
+.u-choice{position:relative;width:100%;background-color:rgba(28,30,33,.92);font-weight:400;word-break:keep-all}
+.u-choice.sel{background-color:#fff}
+.u-set{background-color:rgba(28,30,33,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.u-set i{display:block;width:24px;height:3px;background:#fff}
+.u-skin{background-color:transparent !important}
+.u-skin i{display:none}
+.u-tbg{inset:0;background-color:#1C1E21;background-size:cover}
+.u-logo{display:flex;align-items:center;font-weight:900;letter-spacing:-.04em;line-height:1.02;word-break:keep-all;overflow:hidden;background-size:contain;background-position:left center}
+.u-logo.empty{outline:3px dashed rgba(255,255,255,.25);outline-offset:-3px}
+.u-ecut{inset:0;background:#1C1E21 center / contain no-repeat;display:flex;align-items:flex-start}
+.u-ecut span{margin:24px;font-size:18px;color:rgba(255,255,255,.4)}
+.u-etitle{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;word-break:keep-all;outline:2px dashed rgba(255,255,255,.18);outline-offset:-2px}
+.u-etitle small{font-size:20px;font-weight:700;opacity:.65}
+.u-etitle b{font-weight:900;letter-spacing:-.035em;line-height:1.15}
+.u-ebtn{display:flex;align-items:center;justify-content:center;background-color:#fff;font-weight:700}
+.u-ebtn.u-skin{background-color:transparent}
+.u-menu{display:flex;flex-direction:column;gap:4px;font-weight:700;min-width:280px}
+.u-menu span{padding:12px 0 12px 28px}
+.u-menu span.on{color:#fff}
+.selbox{position:absolute;display:none;border:3px dashed var(--accent);z-index:10;box-sizing:border-box;pointer-events:none}
+.selbox .tag{position:absolute;left:-3px;bottom:calc(100% + 6px);background:var(--accent);color:#fff;font-size:20px;font-weight:700;padding:3px 10px;border-radius:5px;white-space:pre;pointer-events:none}
+.uiform{padding:6px 8px 10px;display:flex;flex-direction:column;gap:8px}
+.uiform .in{height:32px}
+.geo{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px}
+.nf{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.nf span{flex:none;min-width:22px}
+.nf .in{width:100%;min-width:0}
+.unote{margin:0;font-size:12px;line-height:1.6;color:var(--muted)}
+.unote.pad, .btnrow.pad{padding:6px 8px}
+.btnrow{display:flex;flex-wrap:wrap;gap:6px}
+.uisub.first{border-top:none;margin-top:0}
+.col1{display:flex;flex-direction:column;gap:10px}
+.sfxrow{display:flex;gap:8px;align-items:center}
+.sfxrow select{flex:1;min-width:0}
+.loopchk{display:flex;align-items:center;gap:4px;font-size:12.5px;white-space:nowrap;cursor:pointer}
+.titlebgm{display:flex;align-items:center;gap:8px;padding:0 16px 10px;font-size:12.5px;color:var(--muted)}
+.titlebgm select{flex:1;height:30px}
+.tsrow{display:grid;grid-template-columns:1fr 86px 30px 82px;gap:6px;align-items:center;padding:7px 8px;border-radius:8px}
+.tsrow.hot{background:var(--accent-soft)}
+.tsrow b{font-size:12.5px}
+.tsrow .nf.sm .in{height:30px;padding:0 6px}
+.tsrow input[type=color]{width:30px;height:30px;padding:0;border:1.5px solid var(--rule);border-radius:6px;background:none;cursor:pointer}
+.tsrow .hex{height:30px;padding:0 7px;font-size:12px}
+.uilist{display:flex;flex-direction:column;gap:10px}
+.uicard,.uiwin{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:8px}
+.usep{border:none;border-top:2px solid rgba(255,255,255,.18);margin:2px 4px}
+.uiwin>summary{list-style:none;cursor:pointer;padding:6px 8px;font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:8px}
+.uiwin>summary::-webkit-details-marker{display:none}
+.uiwin>summary::before{content:"▾";font-size:11px;color:var(--muted);transition:transform .12s}
+.uiwin:not([open])>summary::before{transform:rotate(-90deg)}
+.uiwin>summary small{font-weight:400;font-size:11.5px;color:var(--muted)}
+.wbody{padding-top:4px}
+.ecard{border-radius:8px}
+.ecard + .ecard{border-top:1px solid var(--rule)}
+.ecard.open{background:var(--accent-soft);border-top-color:transparent}
+.ehead{width:100%;border:none;background:none;text-align:left;padding:9px 8px;display:flex;align-items:center;gap:8px}
+.ehead .et{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.ehead b{font-size:13px}
+.ehead .st{font-size:11.5px;font-weight:500;color:var(--muted)}
+.ehead .st.on{color:#2E9E5B}
+.ehead .chev{color:var(--muted);font-size:12px}
+.ebody{padding:2px 10px 12px;display:flex;flex-direction:column;gap:8px}
+.sl{display:grid;grid-template-columns:52px 1fr 64px;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.sl input[type=range]{width:100%;accent-color:var(--accent)}
+.sl .num{height:28px;padding:0 6px;font-size:12px}
+.uirow{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:10px 8px;border-radius:8px;align-items:center}
+.uirow + .uirow{border-top:1px solid var(--rule);border-radius:0}
+.uirow:hover{background:var(--accent-soft)}
+.uirow b{font-size:13px}
+.uirow .meta{grid-column:1;font-size:11.5px;color:var(--muted)}
+.uirow .st{font-size:11.5px;font-weight:500}
+.uirow .st.on{color:#2E9E5B}
+.uirow .btns{grid-column:2;grid-row:1 / span 2;display:flex;gap:4px}
+
+/* ---------- 오른쪽 패널(대사 탭) ---------- */
+#inspCard{background:var(--card);border-radius:10px;margin-bottom:10px;border:1px solid var(--rule);padding:12px 14px 14px;display:flex;flex-direction:column;gap:10px}
+#inspCard .lhead{display:flex;align-items:center;gap:8px}
+#inspCard .lhead b{font-size:14px}
+#inspCard .lhead .chip{width:14px;height:14px;border-radius:4px;border:1.5px solid #1D2331}
+#inspCard .lhead .x{margin-left:auto}
+#insp{display:flex;flex-direction:column;gap:10px}
+
+@media (max-width:1100px){
+  .slots{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .bggrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .uiwrap{grid-template-columns:1fr}
+  .sndgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .sndcols{grid-template-columns:1fr}
+  .tab{padding:0 10px}
+}
+
+.tb2.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.tb2.primary:hover{background:#2F6BEA}
+.tb2:disabled{opacity:.45;cursor:default;border-color:var(--rule)}
+.pend{display:inline-block;padding:1px 7px;border-radius:5px;background:var(--warn);color:#1D2331;font-size:11px;font-weight:700;white-space:nowrap}
+.slot .pend-at{position:absolute;right:6px;top:7px;z-index:1}
+.menu-cap{padding:6px 12px 8px 8px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--rule);margin-bottom:4px}
+.switch{display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:500;cursor:pointer;user-select:none}
+.switch input{position:absolute;opacity:0;width:0;height:0}
+.switch .knob{position:relative;flex:none;width:38px;height:22px;border-radius:11px;background:var(--rule);transition:background .15s}
+.switch .knob::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}
+.switch input:checked + .knob{background:var(--accent)}
+.switch input:checked + .knob::after{transform:translateX(16px)}
+.switch input:focus-visible + .knob{outline:2px solid var(--accent);outline-offset:2px}
+#modal .box{width:min(520px,calc(100vw - 32px))}
+#modal p.mcaution{color:var(--ink);background:rgba(242,163,58,.16);border-left:3px solid var(--warn);padding:10px 12px;border-radius:0 8px 8px 0}
+#modal .mscope{margin:0;font-size:12.5px;line-height:1.7;color:var(--muted)}
+#modal .mscope b{color:var(--ink)} #modal .mscope b.neg{color:var(--err)}
+#modal .mwarn{color:var(--err);font-size:12.5px}
+.mwarn-i{color:#B26A00;font-weight:500}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .mwarn-i{color:var(--warn)} }
+#modal ul.dlist{margin:4px 0 2px;max-height:120px;color:var(--err);font-size:12px}
+#modal ul.tree{list-style:none;padding:8px 10px;margin:0;max-height:300px;background:var(--panel);border-radius:8px;font-size:12.5px;line-height:1.75}
+#modal ul.tree li{padding-left:calc(var(--d,0) * 18px)}
+#modal ul.tree .fi{display:inline-block;width:14px;color:var(--muted)}
+#modal ul.tree .fi.d{color:var(--accent)}
+#modal ul.tree em{font-style:normal;font-size:11px;color:var(--accent);margin-left:6px}
+.linkish{align-self:flex-start;border:none;background:none;padding:0;color:var(--accent);font-size:12.5px;text-decoration:underline;text-underline-offset:3px}
+</style>
+</head>
+<body>
+<header id="tabbar">
+  <nav class="tabs" role="tablist" aria-label="편집 화면">
+    <button class="tab" role="tab" data-tab="chars">캐릭터</button>
+    <button class="tab" role="tab" data-tab="ui">UI</button>
+    <button class="tab" role="tab" data-tab="bg">배경</button>
+    <button class="tab" role="tab" data-tab="sound">사운드</button>
+    <button class="tab" role="tab" data-tab="ending">엔딩</button>
+    <button class="tab" role="tab" data-tab="dialog">대사</button>
+  </nav>
+  <span class="spacer"></span>
+  <div class="acts">
+    <button class="tb2" id="gameFolderBtn" disabled>게임폴더 열기</button>
+    <button class="tb2 folder" id="folderBtn"><span class="dot"></span><span id="folderLbl">폴더 연결</span></button>
+    <span class="sep"></span>
+    <button class="tb2" id="loadBtn" disabled>불러오기</button>
+    <button class="tb2 primary" id="saveBtn">저장</button>
+  </div>
+</header>
+
+<main id="views">
+<section class="view" id="v-dialog">
+<div id="ws" tabindex="-1">
+  <div id="world"><svg id="edges" width="1" height="1"></svg></div>
+  <div id="marquee"></div>
+  <div id="toolbar">
+    <input id="title" aria-label="게임 제목" placeholder="게임 제목">
+    <button class="tb primary" id="addBtn">대사 블럭 추가</button>
+    <button class="tb" id="fitBtn">전체 보기</button>
+    <div class="tbg"><button class="tb" id="undoBtn" title="되돌리기 (Ctrl+Z)" aria-label="되돌리기">↶</button><button class="tb" id="redoBtn" title="다시 실행 (Ctrl+Shift+Z)" aria-label="다시 실행">↷</button></div>
+    <span class="spacer"></span>
+    <button class="tb" id="zoomOut" aria-label="축소">－</button>
+    <span id="zoomlbl">100%</span>
+    <button class="tb" id="zoomIn" aria-label="확대">＋</button>
+  </div>
+  <div id="banner">분기 시작으로 만들 대사 블럭을 클릭하세요 · Esc로 취소</div>
+  <div id="legend">
+    <span><i style="background:var(--t-line)"></i>일반 대사</span>
+    <span><i style="background:var(--t-choice)"></i>선택지</span>
+    <span><i style="background:var(--t-flag)"></i>분기 조건 설정</span>
+    <span><i style="background:var(--t-cond)"></i>분기 시작</span>
+    <span><i style="background:var(--t-end)"></i>엔딩</span>
+    <span><b style="border-color:#12151C;box-shadow:0 0 0 1px #fff"></b>연결</span>
+    <span><b style="border-color:#7A5FD0;box-shadow:0 0 0 1px #fff"></b>조건이 필요한 연결</span>
+  </div>
+  <div id="hint">테두리를 끌면 화살표, 몸통을 끌면 이동, 빈 곳을 끌면 범위 선택, 블럭을 더블클릭하면 글 수정. Ctrl+N(또는 Alt+N)으로 블럭 추가, Ctrl+Z로 되돌리기, 휠로 이동, Ctrl+휠로 확대.</div>
+</div>
+<aside id="panel">
+  <section id="inspCard" aria-label="선택한 블럭">
+    <div class="lhead"><span class="chip" id="lchip"></span><b id="ltitle">선택한 블럭</b><button class="x" id="lclose" title="선택 해제 (Esc)">×</button></div>
+    <div id="insp"></div>
+  </section>
+  <details open id="d-check"><summary>검사<span class="cnt" id="issueCnt"></span></summary>
+    <div class="sec">
+      <div id="issues"></div>
+      <p class="note">위쪽 ‘저장’을 누르면 대사가 게임 폴더의 Dialog/Dialog.csv로 저장돼요. 저장할 때마다 ID는 흐름 순서대로 새로 매겨져요.</p>
+    </div></details>
+</aside>
+</section>
+
+<section class="view page" id="v-chars">
+  <div class="phead"><div><h1>캐릭터</h1><p>이름을 누르면 ‘한글 이름/EnglishName’ 형식으로 고칠 수 있어요. 한글은 게임에 표시되는 이름, 영문은 폴더 이름이에요.<br>표정 칸을 누르면 이미지를 골라 둬요. ‘저장’을 누를 때 Characters/영문이름/표정코드.png로 게임 폴더에 복사돼요.<br>캐릭터는 배경과 같은 16:9 화면 전체에 겹쳐 떠요. 머리 위와 양옆은 비운 투명 PNG로 그리면 되고, 날개·파티클도 화면 어디에나 그릴 수 있어요. 1920 × 1080처럼 크게 그릴수록 선명해요. 점선은 대사창이 덮는 자리예요. 움직이는 GIF·WebP·APNG도 넣을 수 있어요.</p></div>
+    <span class="spacer"></span><button class="btn primary" id="addChar">캐릭터 추가</button></div>
+  <div class="pbody" id="charSets"></div>
+</section>
+
+<section class="view page" id="v-ui">
+  <div class="phead"><div><h1>UI</h1><p>왼쪽은 미리보기예요. 오른쪽 ‘화면 요소’에서 대사창·이름표 같은 요소를 눌러 슬라이더로 위치와 크기를 바꾸고, ‘리소스 선택’으로 이미지를 골라요.<br>글꼴과 글자 크기·색도 오른쪽 창에서 정해요. ‘저장’을 누르면 이미지는 UI 폴더에, 배치와 글자 설정은 UI/Layout.json에 저장돼요.</p></div></div>
+  <div class="pbody"><div class="uiwrap">
+    <div class="stagebox">
+      <span class="cap">게임 화면 (선택지)</span>
+      <div class="sw" id="sw-game"><div class="stage" id="stage-game"><div class="layer"></div><div class="selbox"><span class="tag"></span></div></div></div>
+      <span class="cap" style="margin-top:8px">메인 화면</span>
+      <div class="sw" id="sw-title"><div class="stage" id="stage-title"><div class="layer"></div><div class="selbox"><span class="tag"></span></div></div></div>
+      <span class="cap" style="margin-top:8px">엔딩 화면</span>
+      <div class="sw" id="sw-ending"><div class="stage" id="stage-ending"><div class="layer"></div><div class="selbox"><span class="tag"></span></div></div></div>
+    </div>
+    <div class="uilist" id="uiList"></div>
+  </div></div>
+</section>
+
+<section class="view page" id="v-bg">
+  <div class="phead"><div><h1>배경</h1><p>이름은 ‘배경 이름/BackgroundName’ 형식이에요. 영문 이름이 파일 이름이 되고, 대사에서는 bg_영문이름 으로 골라요.<br>이미지를 누르면 파일을 골라 두고, ‘저장’을 누를 때 Backgrounds/영문이름.png로 복사해요. 16:9 비율이면 1920 × 1080처럼 더 커도 돼요. 움직이는 GIF·WebP·APNG도 넣을 수 있어요.</p></div>
+    <span class="spacer"></span><button class="btn primary" id="addBg">배경 추가</button></div>
+  <div class="pbody"><div class="bggrid" id="bgGrid"></div></div>
+</section>
+
+<section class="view page" id="v-ending">
+  <div class="phead"><div><h1>엔딩</h1><p>엔딩을 만들고 이름을 ‘엔딩 제목/ENDINGNAME’ 형식으로 정해요. 대사 탭의 엔딩 블럭에서 이 엔딩을 고르면, 엔딩 화면에 제목과 컷씬이 나와요.<br>컷씬은 16:9 이미지(PNG·움직이는 GIF·WebP·APNG)로, ‘저장’을 누르면 Endings/영문이름.png 등으로 복사돼요. 컷씬 없이 써도 돼요. 엔딩 화면의 글자·버튼 위치는 UI 탭에서 바꿔요.</p></div>
+    <span class="spacer"></span><button class="btn primary" id="addEnding">엔딩 추가</button></div>
+  <div class="pbody"><div class="bggrid" id="endGrid"></div></div>
+</section>
+
+<section class="view page" id="v-sound">
+  <div class="phead"><div><h1>사운드</h1><p>이름은 ‘사운드 이름/SoundName’ 형식이에요. 음표를 누르면 소리 파일을 골라 두고, ‘저장’을 누를 때 Sounds/BGM 또는 Sounds/SFX 폴더에 복사해요.<br>BGM의 ★는 메인 BGM(대사에서 MAIN)이에요. 아이폰까지 생각하면 mp3를 추천해요.</p></div></div>
+  <div class="pbody"><div class="sndcols">
+    <section class="sndcol"><div class="sndhead"><b>BGM</b><small>반복 재생</small><span class="spacer"></span><button class="btn small primary" data-add="bgm">BGM 추가</button></div><div id="titleBgmRow"></div><div class="sndgrid" id="bgmGrid"></div></section>
+    <section class="sndcol"><div class="sndhead"><b>SFX</b><small>1회 재생</small><span class="spacer"></span><button class="btn small primary" data-add="sfx">SFX 추가</button></div><div class="sndgrid" id="sfxGrid"></div></section>
+  </div></div>
+</section>
+</main>
+
+<div id="pop"></div>
+<div id="toast"></div>
+<input type="file" id="pickFile" hidden>
+<input type="file" id="openFile" accept=".json,.csv" hidden>
+<div id="modal" role="dialog" aria-modal="true"><div class="box" id="mbox"></div></div>
+
+<script>
+/* ======================= 상수 ======================= */
+const W = 340;
+const EXPRS = [
+  {name:'기본', code:'default', emoji:'😐'}, {name:'웃음', code:'smile', emoji:'😄'},
+  {name:'주눅', code:'timid', emoji:'😥'},   {name:'충격', code:'shock', emoji:'😲'},
+  {name:'슬픔', code:'sad', emoji:'😢'},     {name:'화남', code:'angry', emoji:'😠'}];
+const TYPES = {
+  line:  {label:'일반 대사',      color:'#FFFFFF'},
+  choice:{label:'선택지',         color:'#FFE58F'},
+  flag:  {label:'분기 조건 설정', color:'#C9C0EC'},
+  cond:  {label:'분기 시작',      color:'#A6DDEE'},
+  end:   {label:'엔딩',           color:'#C5E86C'}};
+const PERSON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="4.5"/><path d="M3.5 21c.6-4.6 4.2-7.2 8.5-7.2s7.9 2.6 8.5 7.2z"/></svg>';
+const BURGER = '<svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="2" rx="1" fill="#1D2331"/><rect x="2" y="7" width="12" height="2" rx="1" fill="#1D2331"/><rect x="2" y="11" width="12" height="2" rx="1" fill="#1D2331"/></svg>';
+const uid = () => Math.random().toString(36).slice(2, 10);
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ======================= 상태 ======================= */
+let P;                                  // 프로젝트
+const view = {x: 0, y: 0, z: 1};
+const sel = {blocks: new Set(), edge: null};
+let drag = null, linkFrom = null, spaceDown = false, lastIssues = null;
+const els = new Map();
+
+function sampleProject(){
+  const c = {n:uid(), p:uid(), a:uid(), b:uid()};
+  const bk = (id,type,x,y,o={}) => Object.assign({id, type, x, y, charId:null, expr:'기본', text:'', flagName:'', flagSource:null,
+    endKey:'', bg:'', bgm:'', sfx:'', sfxLoop:false, memo:'', scene:'', showFlag:'', showState:'켜짐'}, o);
+  const B = [
+    bk('b1','line',0,0,{charId:c.n,text:'방과 후 동아리실. 창가 자리를 두고 오늘도 실랑이가 벌어졌다.',bg:'bg_clubroom',bgm:'MAIN',scene:'1. 동아리실'}),
+    bk('b2','line',0,170,{charId:c.a,expr:'화남',text:'지호, 또 내 자리에 앉았네?'}),
+    bk('b3','line',0,340,{charId:c.b,expr:'화남',text:'네 이름이라도 써 있었냐?'}),
+    bk('b4','line',0,510,{charId:c.p,text:'(두 사람에게 뭐라고 할까?)'}),
+    bk('b5','flag',-200,700,{text:'둘 다 그만하고 악수해.',flagName:'FLAG_MAKEUP'}),
+    bk('b6','choice',200,700,{text:'(못 본 척한다)'}),
+    bk('b7','line',-200,890,{charId:c.a,expr:'슬픔',text:'……알았어. 미안.'}),
+    bk('b8','line',200,890,{charId:c.b,text:'흥.'}),
+    bk('b9','line',0,1080,{charId:c.n,text:'다음 날, 축제 준비 회의.',bg:'bg_meeting',sfx:'sfx_door',scene:'2. 축제 준비'}),
+    bk('b10','cond',-200,1270,{charId:c.a,expr:'웃음',text:'지호야, 이거 같이 들자!',flagSource:'b5',bgm:'bgm_warm'}),
+    bk('b11','line',-200,1440,{charId:c.b,expr:'웃음',text:'어, 그래!'}),
+    bk('b12','end',-200,1610,{text:'[True Ending] 같은 편',endKey:'ENDING_TRUE',bgm:'bgm_ending_true'}),
+    bk('b13','line',200,1270,{charId:c.b,expr:'화남',text:'알아서 해.'}),
+    bk('b14','line',200,1440,{charId:c.a,expr:'슬픔',text:'……진짜 최악.'}),
+    bk('b15','end',200,1610,{text:'[Bad Ending] 평행선',endKey:'ENDING_BAD',bgm:'bgm_ending_bad'})];
+  const E = [[1,2],[2,3],[3,4],[4,5],[4,6],[5,7],[6,8],[7,9],[8,9],[9,10],[9,13],[10,11],[11,12],[13,14],[14,15]]
+    .map(([a,b]) => ({id:uid(), from:'b'+a, to:'b'+b}));
+  return {
+    title:'게임 제목', startId:'b1',
+    characters:[
+      {id:c.n, name:'내레이터', path:'Characters/Narrator', img:'', player:false},
+      {id:c.p, name:'주인공', path:'Characters/Protagonist', img:'', player:true},
+      {id:c.a, name:'서윤', path:'Characters/Seoyun', img:'', player:false},
+      {id:c.b, name:'지호', path:'Characters/Jiho', img:'', player:false}],
+    blocks:B, edges:E,
+    sound:{bgmFolder:'Sounds/BGM/', sfxFolder:'Sounds/SFX/', mainBgm:'bgm_main',
+      bgm:[{key:'bgm_main',file:'bgm_main.ogg',desc:'메인 테마'},{key:'bgm_warm',file:'bgm_warm.ogg',desc:'따뜻한'},
+           {key:'bgm_ending_true',file:'bgm_ending_true.ogg',desc:'트루 엔딩'},{key:'bgm_ending_bad',file:'bgm_ending_bad.ogg',desc:'배드 엔딩'}],
+      sfx:[{key:'sfx_door',file:'sfx_door.wav',desc:'문 열림'},{key:'sfx_bell',file:'sfx_bell.wav',desc:'종소리'}]},
+    bgFolder:'Backgrounds/',
+    backgrounds:[{key:'bg_clubroom',file:'bg_clubroom',desc:'동아리실'},{key:'bg_meeting',file:'bg_meeting',desc:'회의실'}]
+  };
+}
+const BLOCK_DEFAULT = {type:'line', x:0, y:0, charId:null, expr:'기본', text:'', flagName:'', flagSource:null, endKey:'', bg:'', bgm:'', sfx:'', sfxLoop:false, memo:'', scene:'', showFlag:'', showState:'켜짐'};
+function normalizeProject(d){
+  d.title = d.title || '';
+  d.layout = mergeLayout(d.layout);
+  d.characters = (d.characters || []).map(c => Object.assign({id:uid(), name:'', path:'', img:'', player:false}, c));
+  d.blocks = (d.blocks || []).map(b => Object.assign({}, BLOCK_DEFAULT, b));
+  d.edges = (d.edges || []).filter(e => e.from && e.to).map(e => Object.assign({id:uid()}, e));
+  d.sound = Object.assign({bgmFolder:'Sounds/BGM/', sfxFolder:'Sounds/SFX/', mainBgm:'', titleBgm:'', bgm:[], sfx:[]}, d.sound || {}); // titleBgm: '' = 메인 BGM과 같게, 'none' = 없음
+  d.bgFolder = d.bgFolder ?? 'Backgrounds/';
+  d.backgrounds = (d.backgrounds || []).map(b => { // 예전 형식(path) 호환
+    if (b.file == null && b.path != null){ const i = b.path.lastIndexOf('/'); return {key:b.key, file:i >= 0 ? b.path.slice(i + 1) : b.path, desc:b.desc || ''}; }
+    return Object.assign({key:'', file:'', desc:''}, b); })
+    .map(b => Object.assign(b, {id: b.id || uid(), file: (b.key || '').replace(/^bg_/, '') || b.file})); // 게임 규칙: bg_xxx → Backgrounds/xxx.png
+  d.sound.bgm = d.sound.bgm.map(x => Object.assign({id:uid(), key:'', file:'', desc:''}, x));
+  d.sound.sfx = d.sound.sfx.map(x => Object.assign({id:uid(), key:'', file:'', desc:''}, x));
+  d.endings = d.endings ? d.endings.map(x => Object.assign({id:uid(), key:'', file:'', desc:''}, x)) : deriveEndings(d.blocks, []);
+  return d;
+}
+// 엔딩 목록: 엔딩 블럭이 쓰는 키에서 만들고, 이미 있던 엔딩(id·컷씬)은 키로 이어 씀
+function deriveEndings(blocks, prev){
+  const out = [], byKey = new Map(prev.map(e => [e.key, e]));
+  for (const b of blocks){
+    if (b.type !== 'end' || !b.endKey || out.some(e => e.key === b.endKey)) continue;
+    const ex = byKey.get(b.endKey);
+    out.push(ex ? Object.assign({}, ex, {desc:b.text || ex.desc}) : {id:uid(), key:b.endKey, file:b.endKey.replace(/^ENDING_/, ''), desc:b.text || ''});
+  }
+  prev.forEach(e => { if (!out.some(o => o.key === e.key) && RES.has(KEY.end(e))) out.push(e); }); // 컷씬이 있는 엔딩은 남김
+  return out;
+}
+
+/* ======================= 조회 도우미 ======================= */
+const blk = id => P.blocks.find(b => b.id === id);
+const chr = id => P.characters.find(c => c.id === id);
+const player = () => P.characters.find(c => c.player) || P.characters[0];
+const isChoice = b => b && (b.type === 'choice' || b.type === 'flag');
+const kids = id => P.edges.filter(e => e.from === id).map(e => blk(e.to)).filter(Boolean).sort((a,b) => a.x - b.x || a.y - b.y);
+const parents = id => P.edges.filter(e => e.to === id).map(e => blk(e.from)).filter(Boolean);
+const exprOf = name => EXPRS.find(e => e.name === name) || EXPRS[0];
+function classify(list){ const r = {ch:[], sky:[], nor:[]}; list.forEach(b => (isChoice(b) ? r.ch : b.type === 'cond' ? r.sky : r.nor).push(b)); return r; }
+function speakerOf(b){ if (b.type === 'end') return null; if (isChoice(b)) return player(); return chr(b.charId); }
+function nextName(prefix, used){ let n = 1; while (used.includes(prefix + n)) n++; return prefix + n; }
+
+/* ======================= 화면 변환 ======================= */
+const ws = $('#ws'), world = $('#world'), svg = $('#edges');
+function applyView(){
+  world.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.z})`;
+  const g = 22 * view.z;
+  ws.style.backgroundSize = `${g}px ${g}px`;
+  ws.style.backgroundPosition = `${view.x}px ${view.y}px`;
+  $('#zoomlbl').textContent = Math.round(view.z * 100) + '%';
+}
+function toWorld(cx, cy){ const r = ws.getBoundingClientRect(); return {x:(cx - r.left - view.x) / view.z, y:(cy - r.top - view.y) / view.z}; }
+function zoomAt(f, cx, cy){
+  const r = ws.getBoundingClientRect(), z = Math.min(2.5, Math.max(0.2, view.z * f));
+  const px = cx - r.left, py = cy - r.top;
+  view.x = px - (px - view.x) * z / view.z; view.y = py - (py - view.y) * z / view.z; view.z = z; applyView();
+}
+function fitView(){
+  if (!P.blocks.length){ view.x = 80; view.y = 90; view.z = 1; applyView(); return; }
+  let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+  P.blocks.forEach(b => { const h = els.get(b.id)?.offsetHeight || 110; x1 = Math.min(x1, b.x); y1 = Math.min(y1, b.y); x2 = Math.max(x2, b.x + W + 30); y2 = Math.max(y2, b.y + h); });
+  const r = ws.getBoundingClientRect(), pad = 80;
+  const z = Math.min(1.1, Math.max(0.2, Math.min((r.width - pad*2) / (x2 - x1), (r.height - pad*2 - 40) / (y2 - y1))));
+  if (z < 0.45){ // 흐름이 길면 전체를 억지로 줄이지 않고 시작 블럭부터 읽을 수 있는 크기로
+    const st = blk(lastIssues?.start) || P.blocks[0]; view.z = 0.6;
+    view.x = r.width / 2 - (st.x + W/2) * view.z; view.y = pad + 30 - st.y * view.z; applyView(); return;
+  }
+  view.z = z; view.x = (r.width - (x2 - x1) * z) / 2 - x1 * z; view.y = pad + 30 - y1 * z; applyView();
+}
+
+/* ======================= 블럭 DOM ======================= */
+function buildBlock(b){
+  const el = document.createElement('div');
+  el.className = 'block'; el.dataset.id = b.id;
+  el.innerHTML = `<div class="tag"></div><div class="badge">!</div>
+    <button class="pf" title="캐릭터 선택"></button>
+    <div class="bbody"><div class="brow"><div class="nm"></div>
+      <button class="ib menu" title="블럭 종류">${BURGER}</button><button class="ib emo" title="표정"></button></div>
+      <textarea class="txt" rows="1" spellcheck="false"></textarea><span class="tcount"></span></div>
+    <button class="linkbtn" title="이 조건으로 분기 시작할 블럭 연결">›</button>`;
+  const ta = el.querySelector('.txt');
+  const cur = () => blk(el.dataset.id); // 되돌리기 후에도 항상 최신 블럭 객체를 쓰도록
+  ta.addEventListener('input', () => { const b = cur(); if (!b) return; b.text = ta.value; if (b.type === 'end') syncEndingTitle(b.endKey, b.text, b); autoH(ta); countText(el, b); drawEdges(); scheduleCheck(); });
+  ta.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') ta.blur(); });
+  ta.addEventListener('blur', () => { el.classList.remove('editing'); refresh(); });
+  el.querySelector('.pf').addEventListener('click', e => openCharPop(cur(), e.currentTarget));
+  el.querySelector('.nm').addEventListener('click', e => { if (!e.currentTarget.classList.contains('ro')) openCharPop(cur(), e.currentTarget); });
+  el.querySelector('.menu').addEventListener('click', e => openTypePop(cur(), e.currentTarget));
+  el.querySelector('.emo').addEventListener('click', e => openEmoPop(cur(), e.currentTarget));
+  el.querySelector('.linkbtn').addEventListener('click', () => startLink(cur()));
+  world.appendChild(el); els.set(b.id, el);
+  return el;
+}
+function startEdit(b){
+  const el = els.get(b.id); if (!el) return; selectOnly([b.id]); el.classList.add('editing');
+  const ta = el.querySelector('.txt'); ta.focus({preventScroll:true}); ta.setSelectionRange(ta.value.length, ta.value.length); renderInspector();
+}
+function countText(el, b){ // 대사창에 들어가는 글자 수 표시 (대사·분기 시작 블럭)
+  const c = el.querySelector('.tcount'), lim = b.type === 'line' || b.type === 'cond';
+  c.textContent = lim ? `${charLen(b.text)} / ${dialogMax()}` : '';
+  c.classList.toggle('over', lim && charLen(b.text) > dialogMax());
+}
+function syncEndingTitle(key, text, except){ // 엔딩 제목은 엔딩 탭과 그 엔딩을 쓰는 모든 블럭이 같음
+  const d = P.endings.find(e => e.key === key); if (d) d.desc = text;
+  P.blocks.forEach(x => { if (x !== except && x.type === 'end' && x.endKey === key){ x.text = text; const el2 = els.get(x.id); if (el2){ const t2 = el2.querySelector('.txt'); if (document.activeElement !== t2) t2.value = text; } } });
+}
+function autoH(ta){ ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+function updateBlock(b){
+  const el = els.get(b.id) || buildBlock(b);
+  el.style.left = b.x + 'px'; el.style.top = b.y + 'px';
+  const editing = el.classList.contains('editing');
+  el.className = 'block t-' + b.type + (sel.blocks.has(b.id) ? ' sel' : '') + (editing ? ' editing' : '');
+  { const ta0 = el.querySelector('.txt'), lim = b.type === 'line' || b.type === 'cond';
+    if (lim) ta0.maxLength = Math.max(dialogMax(), charLen(b.text)); else ta0.removeAttribute('maxlength'); countText(el, b); }
+  const iss = lastIssues?.byBlock.get(b.id) || [];
+  if (iss.some(i => i.lvl === 'err')) el.classList.add('has-err'); else if (iss.length) el.classList.add('has-warn');
+  el.querySelector('.badge').title = iss.map(i => i.msg).join('\n');
+  const sp = speakerOf(b), pf = el.querySelector('.pf'), nm = el.querySelector('.nm');
+  if (b.type === 'end'){ if (pf.dataset.k !== 'end'){ pf.innerHTML = '<span class="end-mark">엔딩</span>'; pf.dataset.k = 'end'; } pf.disabled = true; nm.textContent = b.endKey || '엔딩 키 없음'; nm.className = 'nm ro'; }
+  else {
+    const src = sp ? charThumb(sp, (b.type === 'line' || b.type === 'cond') ? b.expr : '기본') : '';
+    const pk = src || 'none';
+    if (pf.dataset.k !== pk){ pf.innerHTML = src ? `<img alt="" src="${src}">` : PERSON; pf.dataset.k = pk; }
+    pf.disabled = isChoice(b);
+    pf.title = isChoice(b) ? '선택지는 플레이어가 고르는 문구예요' : '캐릭터 선택';
+    nm.textContent = isChoice(b) ? (sp ? sp.name + ' 선택' : '플레이어 선택') : (sp ? sp.name : '캐릭터 선택');
+    nm.className = 'nm' + (isChoice(b) ? ' ro' : '');
+  }
+  const emo = el.querySelector('.emo');
+  emo.style.display = (b.type === 'line' || b.type === 'cond') ? '' : 'none';
+  emo.textContent = exprOf(b.expr).emoji; emo.title = '표정: ' + b.expr;
+  el.querySelector('.linkbtn').style.display = b.type === 'flag' ? '' : 'none';
+  el.querySelector('.linkbtn').classList.toggle('active', linkFrom === b.id);
+  const ta = el.querySelector('.txt');
+  ta.placeholder = {line:'대사를 입력하세요', cond:'조건을 만족할 때 나오는 대사', choice:'선택지 문구', flag:'선택지 문구 (고르면 플래그가 켜져요)', end:'엔딩 제목'}[b.type];
+  if (document.activeElement !== ta && ta.value !== b.text) ta.value = b.text;
+  autoH(ta);
+  const tags = [];
+  if (lastIssues?.start === b.id) tags.push('<span class="s">시작</span>');
+  if (lastIssues?.rank?.has(b.id)) tags.push(`<span class="r">${lastIssues.rank.get(b.id)}순위</span>`);
+  if (lastIssues?.gatePass?.has(b.id)) tags.push('<span class="ok">어느 길로 와도 반드시 이어져요</span>');
+  if (b.scene) tags.push(`<span>${esc(b.scene)}</span>`);
+  if (b.type === 'flag') tags.push(`<span class="f">켜는 플래그 ${esc(b.flagName || '?')}</span>`);
+  if (isChoice(b) && b.showFlag) tags.push(`<span class="f">보임 조건 ${esc(b.showFlag)} ${esc(b.showState)}</span>`);
+  if (b.type === 'cond'){ const s = blk(b.flagSource); tags.push(`<span class="f">조건 ${esc(s?.type === 'flag' ? s.flagName : '연결 필요')} 켜짐</span>`); }
+  if (b.bgm) tags.push(`<span>♪ ${esc(b.bgm)}</span>`);
+  if (b.sfx) tags.push(`<span>SFX ${esc(b.sfx)}${b.sfxLoop && (b.type === 'line' || b.type === 'cond') ? ' 반복' : ''}</span>`);
+  el.querySelector('.tag').innerHTML = tags.join('');
+}
+function syncBlocks(){
+  for (const [id, el] of els) if (!blk(id)){ el.remove(); els.delete(id); }
+  P.blocks.forEach(updateBlock);
+}
+
+/* ======================= 화살표 ======================= */
+const ns = 'http://www.w3.org/2000/svg';
+function anchor(b, end){ const el = els.get(b.id), h = el ? el.offsetHeight : 100; return end === 'out' ? {x:b.x + W/2, y:b.y + h} : {x:b.x + W/2, y:b.y}; }
+function curve(a, b){
+  const dy = Math.max(40, Math.abs(b.y - a.y) / 2);
+  return `M${a.x},${a.y} C${a.x},${a.y + dy} ${b.x},${b.y - dy - 8} ${b.x},${b.y - 8}`;
+}
+function drawEdges(tmp){
+  let h = `<defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#12151C"/></marker>
+    <marker id="ahf" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7A5FD0"/></marker>
+    <marker id="aht" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#3E7BFA"/></marker></defs>`;
+  for (const e of P.edges){
+    const a = blk(e.from), b = blk(e.to); if (!a || !b) continue;
+    let p1 = anchor(a,'out'), p2 = anchor(b,'in');
+    if (drag?.mode === 'endpoint' && drag.edge === e.id){ if (drag.end === 'to') p2 = drag.snap || drag.pt; else p1 = drag.snap || drag.pt; }
+    const flag = b.type === 'cond', d = curve(p1, p2);
+    h += `<g class="eg${flag ? ' flagline' : ''}${sel.edge === e.id ? ' sel' : ''}" data-edge="${e.id}">
+      <path class="hit" data-edge="${e.id}" d="${d}"/><path class="halo" d="${d}"/>
+      <path class="line" d="${d}" marker-end="url(#${flag ? 'ahf' : 'ah'})"/>
+      <circle class="ep" data-edge="${e.id}" data-end="from" cx="${p1.x}" cy="${p1.y}" r="7"/>
+      <circle class="ep" data-edge="${e.id}" data-end="to" cx="${p2.x}" cy="${p2.y - 4}" r="7"/></g>`;
+  }
+  for (const b of P.blocks){
+    if (b.type !== 'cond') continue; const s = blk(b.flagSource); if (!s || s.type !== 'flag') continue;
+    const sh = els.get(s.id)?.offsetHeight || 100, bh = els.get(b.id)?.offsetHeight || 100;
+    const a = {x:s.x + W + 28, y:s.y + sh/2}, c = {x:b.x + W + 12, y:b.y + bh/2};
+    const mx = Math.max(a.x, c.x) + 70;
+    h += `<path class="ref" d="M${a.x},${a.y} C${mx},${a.y} ${mx},${c.y} ${c.x},${c.y}" marker-end="url(#ahf)"/>`;
+  }
+  if (tmp) h += `<path class="tmp" d="${curve(tmp.a, tmp.b)}" marker-end="url(#aht)"/>`;
+  svg.innerHTML = h;
+}
+
+/* ======================= 검사 ======================= */
+const RE_FLAG = /^FLAG_[A-Z0-9_]+$/, RE_END = /^ENDING_[A-Z0-9_]+$/;
+function validate(){
+  const byBlock = new Map(), list = [];
+  const add = (id, lvl, msg, long) => { list.push({id, lvl, msg:long || msg}); if (id){ if (!byBlock.has(id)) byBlock.set(id, []); byBlock.get(id).push({lvl, msg, long:long || msg}); } };
+  const gatePass = new Set(), rank = new Map();
+  const bgmKeys = P.sound.bgm.map(s => s.key), sfxKeys = P.sound.sfx.map(s => s.key), bgKeys = P.backgrounds.map(b => b.key);
+  // 시작 블럭 & 도달 가능
+  const roots = P.blocks.filter(b => !isChoice(b) && !parents(b.id).length).sort((a,b) => a.y - b.y || a.x - b.x);
+  let start = roots.find(b => b.id === P.startId) || roots[0];
+  const reach = new Set();
+  if (start){ const st = [start.id]; while (st.length){ const id = st.pop(); if (reach.has(id)) continue; reach.add(id); kids(id).forEach(k => st.push(k.id)); } }
+  else if (P.blocks.length) add(null, 'err', '시작 블럭이 없어요. 들어오는 화살표가 없는 대사 블럭이 하나 있어야 해요.');
+  for (const b of P.blocks){
+    const k = kids(b.id), par = parents(b.id), c = classify(k);
+    if (start && !reach.has(b.id)) add(b.id, 'warn', '시작에서 이 블럭까지 이어지는 길이 없어요.');
+    if (isChoice(b)){
+      if (par.length !== 1 || !['line','cond'].includes(par[0].type)) add(b.id, 'err', '선택지는 질문 대사 블럭 하나 아래에 연결해야 해요.');
+      if (!b.text.trim()) add(b.id, 'err', '선택지 문구가 비어 있어요.');
+      if (b.showFlag && !P.blocks.some(x => x.type === 'flag' && x.flagName === b.showFlag)) add(b.id, 'err', `보이는 조건 ${b.showFlag}을(를) 켜는 보라 블럭이 없어요.`);
+    } else if (b.type !== 'end'){
+      if (!chr(b.charId)) add(b.id, 'err', '캐릭터를 고르세요.');
+      if (!b.text.trim()) add(b.id, 'err', '대사가 비어 있어요.');
+    }
+    if (b.type === 'end'){
+      if (k.length) add(b.id, 'err', '엔딩 뒤에는 연결할 수 없어요.');
+      if (!b.text.trim()) add(b.id, 'err', '엔딩 제목을 적으세요.');
+      if (!P.endings.some(e => e.key === b.endKey)) add(b.id, 'err', '엔딩을 고르세요.', '이 엔딩 블럭이 어떤 엔딩인지 정해지지 않았어요. 엔딩 탭에서 엔딩을 만들고, 오른쪽 패널의 ‘엔딩’에서 고르세요.');
+    } else if (!k.length){
+      add(b.id, 'err', isChoice(b) ? '선택지를 골랐을 때 이어질 블럭을 연결하세요.' : '다음 블럭이 없어요. 여기서 끝난다면 엔딩 블럭으로 바꾸세요.');
+    } else if (c.ch.length){
+      if (isChoice(b)) add(b.id, 'err', '선택지 바로 아래에 선택지를 둘 수 없어요. 사이에 질문 대사를 넣으세요.');
+      else if (c.sky.length || c.nor.length) add(b.id, 'err', '선택지와 다른 종류 블럭이 같은 갈래에 섞여 있어요.');
+      else if (c.ch.every(x => x.showFlag)) add(b.id, 'warn', '모든 선택지에 보이는 조건이 있어요. 하나도 안 보이면 게임이 멈춰요.');
+    } else if (c.sky.length){
+      if (c.nor.length > 1) add(b.id, 'err', '조건이 꺼졌을 때 이어질 일반 블럭은 1개만 둘 수 있어요.');
+      else if (!c.nor.length && start) checkGate(b, c.sky, start, add, gatePass);
+    } else if (c.nor.length > 1){
+      add(b.id, 'err', '갈래가 여러 개예요. 아래 블럭을 선택지나 분기 시작으로 바꾸세요.');
+    }
+    if (b.type === 'flag'){
+      if (!RE_FLAG.test(b.flagName)) add(b.id, 'err', '플래그 이름은 FLAG_ 뒤에 영문 대문자·숫자로 적어요.');
+      if (!P.blocks.some(x => (x.type === 'cond' && (x.flagSource === b.id || (b.flagName && blk(x.flagSource)?.flagName === b.flagName))) || (isChoice(x) && x.showFlag && x.showFlag === b.flagName)))
+        add(b.id, 'warn', '이 플래그를 확인하는 하늘색 블럭이 없어요.', '이 플래그를 확인하는 하늘색 블럭이 없어서 켜도 달라지는 게 없어요. › 버튼으로 분기 시작 블럭을 연결하거나, 플래그가 필요 없다면 노란 선택지로 바꾸세요.');
+    }
+    if (b.type === 'cond'){ const s = blk(b.flagSource); if (!s || s.type !== 'flag') add(b.id, 'err', '어떤 조건으로 열리는지 연결되지 않았어요. 보라색 블럭의 › 버튼으로 연결하세요.'); }
+    if (b.bg && !bgKeys.includes(b.bg)) add(b.id, 'err', `배경 목록에 없는 키예요: ${b.bg}`);
+    if (b.bgm && !['MAIN','STOP'].includes(b.bgm) && !bgmKeys.includes(b.bgm)) add(b.id, 'err', `BGM 목록에 없는 키예요: ${b.bgm}`);
+    if (b.sfx && !sfxKeys.includes(b.sfx)) add(b.id, 'err', `SFX 목록에 없는 키예요: ${b.sfx}`);
+  }
+  if (start && !start.bgm && P.sound.bgm.length) add(start.id, 'warn', '첫 블럭에 BGM을 지정하세요. 보통 MAIN을 써요.');
+  for (const b of P.blocks) if ((b.type === 'line' || b.type === 'cond') && charLen(b.text) > dialogMax())
+    add(b.id, 'warn', `대사창에 다 안 들어가요. (${charLen(b.text)} / ${dialogMax()}자)`, `대사가 ${charLen(b.text)}자예요. 대사창은 ${dialogMax()}자까지 들어가요. 넘치는 부분은 게임에서 잘리니 블럭을 둘로 나눠 주세요.`);
+  P.characters.forEach(c => { if (charLen(c.name) > NAME_MAX) add(null, 'warn', `${c.name.slice(0, 10)}…: 이름은 ${NAME_MAX}자까지 쓸 수 있어요. (캐릭터 탭)`); });
+  const names = P.characters.map(c => c.name.trim());
+  if (names.some(n => !n)) add(null, 'err', '이름이 비어 있는 캐릭터가 있어요.');
+  if (new Set(names).size !== names.length) add(null, 'err', '이름이 같은 캐릭터가 있어요.');
+  for (const [grp, lst] of [['BGM', P.sound.bgm], ['SFX', P.sound.sfx], ['배경', P.backgrounds]]){
+    const ks = lst.map(s => s.key);
+    if (new Set(ks).size !== ks.length) add(null, 'err', `${grp} 변수명이 중복돼요.`);
+    lst.forEach(s => { if (!s.key) add(null, 'err', `${grp} 목록에 변수명이 빈 줄이 있어요.`);
+      else if (!s.file) add(null, 'err', `${grp} ${s.key}: 파일 이름이 비어 있어요.`);
+      else if (grp !== '배경' && !/\.[A-Za-z0-9]+$/.test(s.file)) add(null, 'err', `${grp} ${s.key}: 파일 이름에 확장자가 없어요.`); });
+  }
+  // 사운드는 없어도 됨: 메인 BGM이 없으면 MAIN을 쓴 줄만 주의로 알려 줌 (게임은 소리 없이 진행)
+  if (!bgmKeys.includes(P.sound.mainBgm)) P.blocks.forEach(b => { if (b.bgm === 'MAIN') add(b.id, 'warn', P.sound.bgm.length ? '메인 BGM이 정해지지 않아서 이 줄은 소리 없이 넘어가요. (사운드 탭의 ★)' : 'BGM이 없어서 이 줄의 MAIN은 소리 없이 넘어가요.'); });
+  const engs = P.characters.map(charEng);
+  if (engs.some(n => !RE_EN.test(n))) add(null, 'err', '캐릭터 영문 이름은 영문·숫자·_·-만 쓸 수 있어요. (캐릭터 탭)');
+  if (new Set(engs).size !== engs.length) add(null, 'err', '영문 이름이 같은 캐릭터가 있어요. (캐릭터 탭)');
+  P.backgrounds.forEach(b => { if (!RE_EN.test(b.file)) add(null, 'err', `배경 ${b.key}: 영문 이름은 영문·숫자·_·-만 쓸 수 있어요.`); });
+  if (FS.root){ // 게임 폴더를 연결했으면, 블럭에서 쓰는 리소스에 파일이 정해져 있는지
+    for (const b of P.blocks){
+      if (b.type === 'line' || b.type === 'cond'){ const c = chr(b.charId); if (c && !isNarr(c) && !RES.has(KEY.char(c, exprOf(b.expr).code))) add(b.id, 'warn', `${c.name}의 ‘${b.expr}’ 이미지가 없어요. (캐릭터 탭)`); }
+      const bg = P.backgrounds.find(x => x.key === b.bg); if (bg && !RES.has(KEY.bg(bg))) add(b.id, 'warn', `배경 ${bg.desc || bg.key}의 이미지가 없어요. (배경 탭)`);
+      const bm = P.sound.bgm.find(x => x.key === (b.bgm === 'MAIN' ? P.sound.mainBgm : b.bgm)); if (bm && !RES.has(KEY.snd('bgm', bm))) add(b.id, 'warn', `BGM ${bm.desc || bm.key}의 파일이 없어요. (사운드 탭)`);
+      const sx = P.sound.sfx.find(x => x.key === b.sfx); if (sx && !RES.has(KEY.snd('sfx', sx))) add(b.id, 'warn', `SFX ${sx.desc || sx.key}의 파일이 없어요. (사운드 탭)`);
+    }
+  }
+  // 하늘색 갈래가 둘 이상이면 왼쪽부터 순위 배지
+  for (const b of P.blocks){ if (isChoice(b)) continue; const c = classify(kids(b.id)); if (c.sky.length > 1 && !c.ch.length) c.sky.forEach((s, i) => { if (!rank.has(s.id)) rank.set(s.id, i + 1); }); }
+  // 질문 아래 선택지가 보라 하나뿐이면 그 플래그는 항상 켜짐
+  for (const b of P.blocks){
+    if (isChoice(b)) continue; const ch = classify(kids(b.id)).ch;
+    if (ch.length === 1 && ch[0].type === 'flag' && ch[0].flagName) add(ch[0].id, 'warn', `고를 수 있는 선택지가 이것 하나뿐이라 ${J(ch[0].flagName, '이', '가')} 항상 켜져요. 고르게 하려면 같은 질문 아래에 다른 선택지를 추가하세요.`);
+  }
+  return {byBlock, list, start: start?.id, gatePass, rank};
+}
+/* 하늘색만 이어진 갈림길: 어느 길로 와도 조건 중 하나가 켜져 있는지 시작부터 따라가며 확인 */
+function hasJong(w){
+  w = String(w).replace(/[’'"”)\]\s]+$/, ''); const ch = w.slice(-1); if (!ch) return false; const c = ch.charCodeAt(0);
+  if (c >= 0xAC00 && c <= 0xD7A3) return (c - 0xAC00) % 28 !== 0;
+  if (/[0-9]/.test(ch)) return '013678'.includes(ch);
+  if (/[a-z]/i.test(ch)) return 'lmnr'.includes(ch.toLowerCase());
+  return false;
+}
+const J = (w, a, b) => w + (hasJong(w) ? a : b);
+const quoteT = t => `‘${(t || '').trim().slice(0, 18)}${(t || '').trim().length > 18 ? '…' : ''}’`;
+function checkGate(G, sky, start, add, gatePass){
+  const F = sky.map(s => blk(s.flagSource)?.type === 'flag' ? blk(s.flagSource).flagName : '');
+  if (F.some(f => !f)) return; // 조건이 연결되지 않은 하늘색은 따로 에러가 나므로 여기서는 건너뜀
+  const bitOf = name => F.reduce((m, f, i) => f === name ? m | (1 << i) : m, 0);
+  const on = (m, i) => (m & bitOf(F[i])) !== 0;
+  const chosen = m => F.findIndex((f, i) => on(m, i));
+  const enter = (b, m) => b.type === 'flag' ? m | bitOf(b.flagName) : m;
+  const next = (id, m) => { // 다른 갈림길도 확인 중인 플래그로 결정되면 실제로 갈 곳만
+    const ks = kids(id), c = classify(ks);
+    if (c.sky.length && !c.ch.length){
+      const fl = c.sky.map(s => blk(s.flagSource)?.flagName || '');
+      if (fl.every(f => f && F.includes(f))){
+        const i = fl.findIndex(f => (m & bitOf(f)) !== 0);
+        if (i >= 0) return [c.sky[i]];
+        return [c.nor[0] || c.sky[c.sky.length - 1]];
+      }
+    }
+    return ks;
+  };
+  const key = (id, m) => id + '|' + m, m0 = enter(start, 0);
+  const parent = new Map([[key(start.id, m0), null]]), queue = [[start.id, m0]], arrive = new Map();
+  while (queue.length){
+    const [id, m] = queue.shift();
+    if (id === G.id){ if (!arrive.has(m)) arrive.set(m, key(id, m)); continue; }
+    for (const k of next(id, m)){ const m2 = enter(k, m), k2 = key(k.id, m2); if (!parent.has(k2)){ parent.set(k2, key(id, m)); queue.push([k.id, m2]); } }
+  }
+  const masks = [...arrive.keys()];
+  if (!masks.length) return; // 시작에서 닿지 않는 갈림길은 따로 주의가 나옴
+  const flagsDo = [...new Set(F)].map(f => J(f, '도', '도')).join(' ');
+  let fail = false;
+  // 막히는 길
+  const stuck = masks.find(m => chosen(m) < 0);
+  if (stuck !== undefined){
+    fail = true;
+    let k = arrive.get(stuck), pick = null;
+    while (k){ const b = blk(k.split('|')[0]); if (b && isChoice(b) && !pick) pick = b; k = parent.get(k); }
+    const via = pick ? `${J(quoteT(pick.text), '을', '를')} 고르고 오면` : '시작부터 선택지 없이 오면';
+    add(G.id, 'err', '조건이 하나도 안 맞을 때 갈 곳이 없어요.',
+      `${via} ${flagsDo} 꺼져 있어서 여기서 이야기가 멈춰요. 하늘색 블럭 하나를 일반 대사로 바꾸면 ‘나머지 모든 경우’ 갈래가 돼요.`);
+  }
+  // 절대 안 나오는 갈래
+  const picked = new Set(masks.map(chosen));
+  sky.forEach((s, i) => {
+    if (picked.has(i)) return; fail = true;
+    const m = masks.find(x => on(x, i));
+    let long;
+    if (m !== undefined){
+      const j = chosen(m), pj = blk(sky[j].flagSource), pi = blk(s.flagSource);
+      long = `여기 오기 전에 ${J(F[j], '이', '가')} 항상 함께 켜져서, ${j + 1}순위 ${J(quoteT(sky[j].text), '이', '가')} 늘 먼저 골라져요. ${J(quoteT(pj?.text), '과', '와')} ${quoteT(pi?.text)} 중 하나만 고르게 하려면 두 선택지를 같은 질문 대사 아래에 나란히 연결하세요.`;
+    } else long = `여기에 올 때 ${J(F[i], '이', '가')} 켜져 있는 길이 없어서 이 갈래는 게임에서 나오지 않아요. ${J(F[i], '을', '를')} 켜는 선택지를 지나서 오도록 연결하세요.`;
+    add(s.id, 'err', '이 갈래는 게임에서 나오지 않아요.', long);
+  });
+  if (fail) return;
+  gatePass.add(G.id);
+  // 동시에 켜지는 길 (막히지 않지만 순위가 앞선 갈래로 감)
+  const multi = masks.find(m => F.filter((f, i) => on(m, i)).length > 1);
+  if (multi !== undefined){
+    const names = [...new Set(F.filter((f, i) => on(multi, i)))];
+    const list = names.length > 2 ? names.slice(0, -1).join(', ') : names[0];
+    const msg = `${J(list, '과', '와')} ${J(names[names.length - 1], '이', '가')} 동시에 켜진 채로 올 수 있어요. 그럴 땐 ${chosen(multi) + 1}순위 갈래로 가요.`;
+    add(G.id, 'warn', msg);
+  }
+}
+let checkTimer = 0;
+function scheduleCheck(){ clearTimeout(checkTimer); checkTimer = setTimeout(() => { checkTimer = 0; refresh(); }, 350); }
+
+/* ======================= 전체 갱신 ======================= */
+function refresh({insp = false, side = false} = {}){
+  lastIssues = validate();
+  syncBlocks(); drawEdges(); renderIssues();
+  if (insp) renderInspector();
+  if (side) renderResourceTabs();
+  checkpoint();
+}
+
+/* ======================= 되돌리기 ======================= */
+const hist = {undo:[], redo:[], last:null, restoring:false};
+const histSnap = () => JSON.stringify(P, (k, v) => k === 'img' ? undefined : v); // 미리보기 이미지는 기록에서 빼고 THUMBS에 따로
+function checkpoint(){
+  if (hist.restoring) return;
+  const s = histSnap();
+  if (hist.last === null || s === hist.last){ hist.last = s; updateUndoBtns(); return; }
+  hist.undo.push(hist.last); if (hist.undo.length > 200) hist.undo.shift();
+  hist.last = s; hist.redo = []; updateUndoBtns();
+}
+function resetHistory(){ hist.undo = []; hist.redo = []; hist.last = histSnap(); updateUndoBtns(); }
+function updateUndoBtns(){ $('#undoBtn').disabled = !hist.undo.length; $('#redoBtn').disabled = !hist.redo.length; }
+function restoreState(s){
+  hist.restoring = true;
+  P = JSON.parse(s);
+  P.characters.forEach(c => { c.img = THUMBS.get(c.id) || ''; });
+  sel.blocks = new Set([...sel.blocks].filter(id => blk(id)));
+  if (sel.edge && !P.edges.some(e => e.id === sel.edge)) sel.edge = null;
+  if (linkFrom && !blk(linkFrom)) endLink();
+  $('#title').value = P.title || '';
+  refresh({insp:true, side:true});
+  hist.restoring = false; updateUndoBtns();
+}
+function flushPending(){ if (checkTimer){ clearTimeout(checkTimer); checkTimer = 0; refresh(); } else checkpoint(); }
+function undo(){
+  closePop(); flushPending(); if (document.activeElement?.classList?.contains('txt')) document.activeElement.blur();
+  if (!hist.undo.length){ toast('더 되돌릴 작업이 없어요.'); return; }
+  hist.redo.push(hist.last); hist.last = hist.undo.pop(); restoreState(hist.last); toast('되돌렸어요.');
+}
+function redo(){
+  flushPending();
+  if (!hist.redo.length) return;
+  hist.undo.push(hist.last); hist.last = hist.redo.pop(); restoreState(hist.last); toast('다시 실행했어요.');
+}
+
+/* ======================= 팝오버 ======================= */
+const pop = $('#pop');
+function openPop(anchorEl, html, onClick){
+  pop.innerHTML = html; pop.style.display = 'block';
+  const r = anchorEl.getBoundingClientRect(), pr = pop.getBoundingClientRect();
+  let left = r.left, top = r.bottom + 6;
+  if (left + pr.width > innerWidth - 8) left = innerWidth - pr.width - 8;
+  if (top + pr.height > innerHeight - 8) top = r.top - pr.height - 6;
+  pop.style.left = Math.max(8, left) + 'px'; pop.style.top = Math.max(8, top) + 'px';
+  pop.onclick = e => { const t = e.target.closest('[data-v]'); if (t){ onClick(t.dataset.v); closePop(); } };
+}
+function closePop(){ pop.style.display = 'none'; pop.innerHTML = ''; }
+function openTypePop(b, a){
+  openPop(a, Object.entries(TYPES).map(([k,t]) =>
+    `<button class="menu-item${b.type === k ? ' cur' : ''}" data-v="${k}"><i style="background:${t.color}"></i>${t.label}</button>`).join(''),
+    v => setType(b, v));
+}
+function openEmoPop(b, a){
+  openPop(a, `<div class="emo-grid">${EXPRS.map(x => `<button data-v="${x.name}" title="${x.name}" class="${b.expr === x.name ? 'cur' : ''}">${x.emoji}</button>`).join('')}</div>`,
+    v => { b.expr = v; refresh({insp:true}); });
+}
+function openCharPop(b, a){
+  const list = P.characters.filter(c => !c.player || true);
+  if (!list.length){ toast('캐릭터 탭에서 캐릭터를 먼저 추가하세요.'); return; }
+  openPop(a, list.map(c => `<button class="menu-item${b.charId === c.id ? ' cur' : ''}" data-v="${c.id}">
+      ${charThumb(c, '기본') ? `<img alt="" src="${charThumb(c, '기본')}">` : '<span class="ph"></span>'}${esc(c.name || '이름 없음')}</button>`).join(''),
+    v => { b.charId = v; refresh({insp:true}); });
+}
+function setType(b, t){
+  const was = b.type; b.type = t;
+  if (t === 'flag' && !b.flagName) b.flagName = nextName('FLAG_', P.blocks.map(x => x.flagName));
+  if (t === 'end' && !b.endKey && P.endings[0]){ b.endKey = P.endings[0].key; b.text = P.endings[0].desc; }
+  if ((t === 'line' || t === 'cond') && !b.charId) b.charId = P.characters.find(c => !c.player)?.id || P.characters[0]?.id || null;
+  if (t !== 'cond') b.flagSource = null;
+  if (was === 'flag' && t !== 'flag') P.blocks.forEach(x => { if (x.flagSource === b.id) x.flagSource = null; });
+  refresh({insp:true});
+  if (t === 'cond' && !b.flagSource) toast('보라색 블럭의 › 버튼을 누르고 이 블럭을 클릭하면 조건이 연결돼요.');
+}
+
+/* ======================= 조건 연결 모드 ======================= */
+function startLink(b){ linkFrom = b.id; ws.classList.add('linking'); $('#banner').style.display = 'block'; refresh(); }
+function endLink(){ linkFrom = null; ws.classList.remove('linking'); $('#banner').style.display = 'none'; refresh(); }
+function finishLink(target){
+  if (target.id === linkFrom){ endLink(); return; }
+  if (!['line','cond'].includes(target.type)){ toast('분기 시작은 대사 블럭만 될 수 있어요.'); return; }
+  target.type = 'cond'; target.flagSource = linkFrom;
+  if (!target.charId) target.charId = P.characters.find(c => !c.player)?.id || null;
+  endLink(); refresh({insp:true}); toast('분기 시작으로 연결했어요.');
+}
+
+/* ======================= 편집 동작 ======================= */
+function newBlock(x, y, o = {}){
+  const b = Object.assign({}, BLOCK_DEFAULT, {id:uid(), x:Math.round(x), y:Math.round(y), charId:P.characters.find(c => !c.player)?.id || P.characters[0]?.id || null}, o);
+  P.blocks.push(b); return b;
+}
+function addEdge(from, to){
+  if (from === to || P.edges.some(e => e.from === from && e.to === to)) return false;
+  P.edges.push({id:uid(), from, to}); return true;
+}
+function deleteSelection(){
+  if (sel.edge){ P.edges = P.edges.filter(e => e.id !== sel.edge); sel.edge = null; }
+  if (sel.blocks.size){
+    const ids = sel.blocks;
+    P.blocks = P.blocks.filter(b => !ids.has(b.id));
+    P.edges = P.edges.filter(e => !ids.has(e.from) && !ids.has(e.to));
+    P.blocks.forEach(b => { if (ids.has(b.flagSource)) b.flagSource = null; });
+    if (ids.has(P.startId)) P.startId = null;
+    sel.blocks = new Set();
+  }
+  refresh({insp:true});
+}
+function selectOnly(ids){ sel.blocks = new Set(ids); sel.edge = null; }
+
+/* ======================= 포인터 (FigJam 방식) ======================= */
+const RIM = 9;
+function blockAt(cx, cy, except){
+  const hits = document.elementsFromPoint(cx, cy);
+  for (const h of hits){ const el = h.closest?.('.block'); if (el && el.dataset.id !== except) return blk(el.dataset.id); }
+  return null;
+}
+function onRim(el, cx, cy){
+  const r = el.getBoundingClientRect(), x = cx - r.left, y = cy - r.top;
+  return x < RIM || y < RIM || x > r.width - RIM || y > r.height - RIM;
+}
+const INTERACTIVE = 'textarea,input,select,button';
+
+ws.addEventListener('pointerdown', e => {
+  if (pop.style.display === 'block' && !pop.contains(e.target)) closePop();
+  if (e.target.closest('#toolbar')) return;
+  ws.focus({preventScroll:true});
+  const pt = {x:e.clientX, y:e.clientY};
+  if (e.button === 1 || (e.button === 0 && spaceDown)){
+    drag = {mode:'pan', sx:pt.x, sy:pt.y, vx:view.x, vy:view.y}; ws.classList.add('panning'); ws.setPointerCapture(e.pointerId); e.preventDefault(); return;
+  }
+  if (e.button !== 0) return;
+  const blockEl = e.target.closest('.block');
+  if (linkFrom){
+    if (blockEl && !e.target.closest('.linkbtn')){ finishLink(blk(blockEl.dataset.id)); e.preventDefault(); }
+    else if (!blockEl) endLink();
+    return;
+  }
+  // 화살표 끝점 잡기
+  const ep = e.target.closest('.ep');
+  if (ep){
+    sel.edge = ep.dataset.edge; sel.blocks.clear();
+    drag = {mode:'endpoint', edge:ep.dataset.edge, end:ep.dataset.end, pt:toWorld(pt.x, pt.y)};
+    ws.setPointerCapture(e.pointerId); refresh({insp:true}); return;
+  }
+  const hit = e.target.closest('.hit');
+  if (hit){ sel.edge = hit.dataset.edge; sel.blocks.clear(); refresh({insp:true}); return; }
+  if (blockEl){
+    const b = blk(blockEl.dataset.id);
+    if (e.target.closest(INTERACTIVE)){
+      if (!sel.blocks.has(b.id) || sel.blocks.size > 1){ selectOnly([b.id]); refresh({insp:true}); }
+      return;
+    }
+    if (onRim(blockEl, pt.x, pt.y)){
+      drag = {mode:'connect', from:b.id, pt:toWorld(pt.x, pt.y), target:null};
+      ws.setPointerCapture(e.pointerId); e.preventDefault(); return;
+    }
+    const wasOnly = sel.blocks.size === 1 && sel.blocks.has(b.id);
+    const tr = blockEl.querySelector('.txt').getBoundingClientRect();
+    const overText = pt.x >= tr.left && pt.x <= tr.right && pt.y >= tr.top - 4 && pt.y <= tr.bottom + 4;
+    if (e.shiftKey){ sel.blocks.has(b.id) ? sel.blocks.delete(b.id) : sel.blocks.add(b.id); sel.edge = null; }
+    else if (!sel.blocks.has(b.id)) selectOnly([b.id]);
+    const start = new Map([...sel.blocks].map(id => { const x = blk(id); return [id, {x:x.x, y:x.y}]; }));
+    drag = {mode:'move', sx:pt.x, sy:pt.y, start, moved:false, editOn: wasOnly && overText && !e.shiftKey ? b : null};
+    ws.setPointerCapture(e.pointerId); e.preventDefault(); refresh({insp:true}); return;
+  }
+  // 빈 곳: 범위 선택
+  if (!e.shiftKey){ sel.blocks.clear(); sel.edge = null; }
+  drag = {mode:'marquee', sx:pt.x, sy:pt.y, base:new Set(sel.blocks)};
+  ws.setPointerCapture(e.pointerId); e.preventDefault(); refresh({insp:true});
+});
+
+ws.addEventListener('pointermove', e => {
+  const pt = {x:e.clientX, y:e.clientY};
+  if (!drag){
+    // 테두리 hover 표시
+    document.querySelectorAll('.block.rim').forEach(x => x.classList.remove('rim'));
+    if (linkFrom || spaceDown) return;
+    const el = e.target.closest('.block');
+    if (el && !e.target.closest(INTERACTIVE) && onRim(el, pt.x, pt.y)) el.classList.add('rim');
+    return;
+  }
+  if (drag.mode === 'pan'){ view.x = drag.vx + pt.x - drag.sx; view.y = drag.vy + pt.y - drag.sy; applyView(); return; }
+  if (drag.mode === 'move'){
+    const dx = (pt.x - drag.sx) / view.z, dy = (pt.y - drag.sy) / view.z;
+    if (Math.abs(dx) + Math.abs(dy) > 2) drag.moved = true;
+    for (const [id, s] of drag.start){ const b = blk(id); b.x = Math.round(s.x + dx); b.y = Math.round(s.y + dy);
+      const el = els.get(id); el.style.left = b.x + 'px'; el.style.top = b.y + 'px'; }
+    drawEdges(); return;
+  }
+  if (drag.mode === 'connect' || drag.mode === 'endpoint'){
+    drag.pt = toWorld(pt.x, pt.y);
+    const edge = drag.mode === 'endpoint' ? P.edges.find(x => x.id === drag.edge) : null;
+    const except = drag.mode === 'connect' ? drag.from : (drag.end === 'to' ? edge.from : edge.to);
+    const t = blockAt(pt.x, pt.y, except);
+    document.querySelectorAll('.block.target').forEach(x => x.classList.remove('target'));
+    drag.target = t; drag.snap = null;
+    if (t){ els.get(t.id).classList.add('target'); drag.snap = (drag.mode === 'connect' || drag.end === 'to') ? anchor(t,'in') : anchor(t,'out'); }
+    if (drag.mode === 'connect'){ drawEdges({a:anchor(blk(drag.from),'out'), b:drag.snap || drag.pt}); }
+    else drawEdges();
+    return;
+  }
+  if (drag.mode === 'marquee'){
+    const r = ws.getBoundingClientRect(), m = $('#marquee');
+    const x1 = Math.min(pt.x, drag.sx), y1 = Math.min(pt.y, drag.sy), x2 = Math.max(pt.x, drag.sx), y2 = Math.max(pt.y, drag.sy);
+    Object.assign(m.style, {display:'block', left:(x1 - r.left) + 'px', top:(y1 - r.top) + 'px', width:(x2 - x1) + 'px', height:(y2 - y1) + 'px'});
+    const a = toWorld(x1, y1), b = toWorld(x2, y2);
+    sel.blocks = new Set(drag.base);
+    for (const bl of P.blocks){
+      const h = els.get(bl.id).offsetHeight;
+      if (bl.x < b.x && bl.x + W > a.x && bl.y < b.y && bl.y + h > a.y) sel.blocks.add(bl.id);
+    }
+    P.blocks.forEach(bl => els.get(bl.id).classList.toggle('sel', sel.blocks.has(bl.id)));
+  }
+});
+
+function endDrag(e){
+  if (!drag) return;
+  const d = drag; drag = null;
+  document.querySelectorAll('.block.target').forEach(x => x.classList.remove('target'));
+  ws.classList.remove('panning');
+  if (d.mode === 'connect'){
+    if (d.target){ addEdge(d.from, d.target.id); }
+    else {
+      const src = blk(d.from), hasChoices = classify(kids(src.id)).ch.length > 0;
+      if (src.type === 'end'){ toast('엔딩 뒤에는 연결할 수 없어요.'); }
+      else { const nb = newBlock(d.pt.x - W/2, d.pt.y, hasChoices ? {type:'choice'} : {charId:src.charId || undefined});
+        if (!nb.charId) nb.charId = P.characters.find(c => !c.player)?.id || null;
+        addEdge(src.id, nb.id); selectOnly([nb.id]); requestAnimationFrame(() => startEdit(nb)); }
+    }
+    refresh({insp:true});
+  } else if (d.mode === 'endpoint'){
+    const edge = P.edges.find(x => x.id === d.edge);
+    if (!d.target){ P.edges = P.edges.filter(x => x.id !== d.edge); sel.edge = null; toast('연결을 끊었어요.'); }
+    else {
+      const from = d.end === 'from' ? d.target.id : edge.from, to = d.end === 'to' ? d.target.id : edge.to;
+      if (from !== to && !P.edges.some(x => x !== edge && x.from === from && x.to === to)){ edge.from = from; edge.to = to; }
+    }
+    refresh({insp:true});
+  } else if (d.mode === 'marquee'){ $('#marquee').style.display = 'none'; refresh({insp:true}); }
+  else if (d.mode === 'move'){ refresh({insp:true}); if (!d.moved && d.editOn) startEdit(d.editOn); }
+}
+ws.addEventListener('pointerup', endDrag);
+ws.addEventListener('pointercancel', endDrag);
+ws.addEventListener('dblclick', e => {
+  if (e.target.closest('#toolbar,button')) return;
+  const be = e.target.closest('.block');
+  if (be){ const b = blk(be.dataset.id); if (b) startEdit(b); }
+});
+ws.addEventListener('wheel', e => {
+  if (e.target.closest('#pop')) return;
+  e.preventDefault();
+  if (e.ctrlKey || e.metaKey) zoomAt(Math.exp(-e.deltaY * 0.0022), e.clientX, e.clientY);
+  else { view.x -= e.deltaX; view.y -= e.deltaY; applyView(); }
+}, {passive:false});
+
+addEventListener('keydown', e => {
+  const typing = e.target.closest?.('input,textarea,select');
+  if (e.key === 'Escape'){
+    if (modalOpen()){ closeModal(); return; }
+    closePop(); if (curTab !== 'dialog') return;
+    if (linkFrom) endLink(); else if (!typing){ sel.blocks.clear(); sel.edge = null; refresh({insp:true}); } else e.target.blur();
+  }
+  if (typing || modalOpen()) return;
+  if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ'){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.code === 'KeyY'){ e.preventDefault(); redo(); return; }
+  if (curTab !== 'dialog') return;
+  if (e.code === 'Space'){ spaceDown = true; ws.classList.add('space'); e.preventDefault(); }
+  if (e.key === 'Delete' || e.key === 'Backspace'){ if (sel.blocks.size || sel.edge){ deleteSelection(); e.preventDefault(); } }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a'){ selectOnly(P.blocks.map(b => b.id)); refresh({insp:true}); e.preventDefault(); }
+  if (((e.ctrlKey || e.metaKey) || e.altKey) && e.code === 'KeyN'){ e.preventDefault(); addBlockAtCenter(); }
+});
+addEventListener('keyup', e => { if (e.code === 'Space'){ spaceDown = false; ws.classList.remove('space'); } });
+document.addEventListener('pointerdown', e => { if (pop.style.display === 'block' && !pop.contains(e.target) && !ws.contains(e.target) && !e.target.closest('#saveBtn,#folderBtn')) closePop(); });
+
+/* ======================= 오른쪽 패널 ======================= */
+const opt = (v, label, cur) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(label)}</option>`;
+function setHead(title, color){
+  $('#ltitle').textContent = title; $('#lchip').style.display = color ? '' : 'none'; if (color) $('#lchip').style.background = color;
+  $('#lclose').style.display = (sel.blocks.size || sel.edge) ? '' : 'none';
+}
+function renderInspector(){
+  const box = $('#insp');
+  if (!sel.edge && !sel.blocks.size){ setHead('선택한 블럭', null); box.innerHTML = '<p class="empty">블럭이나 화살표를 고르면 여기에서 종류·캐릭터·배경·사운드를 자세히 고칠 수 있어요.</p>'; return; }
+  if (sel.edge) setHead('선택한 연결', null);
+  else if (sel.blocks.size > 1) setHead(`블럭 ${sel.blocks.size}개`, null);
+  else { const b0 = blk([...sel.blocks][0]); setHead(TYPES[b0.type].label, TYPES[b0.type].color); }
+  if (sel.edge){
+    const e = P.edges.find(x => x.id === sel.edge);
+    const a = blk(e?.from), b = blk(e?.to);
+    box.innerHTML = `<p class="empty">${esc(a?.text?.slice(0,18) || '?')} → ${esc(b?.text?.slice(0,18) || '?')}<br>${b?.type === 'cond' ? '조건이 필요한 연결이에요.' : '일반 연결이에요.'} 끝점을 빈 곳으로 끌거나 Delete를 누르면 끊어져요.</p>
+      <button class="btn danger" id="i-del">연결 끊기</button>`;
+    $('#i-del').onclick = deleteSelection; return;
+  }
+  if (sel.blocks.size !== 1){
+    box.innerHTML = `<p class="empty">블럭 ${sel.blocks.size}개를 골랐어요. 몸통을 끌면 함께 움직여요.</p><button class="btn danger" id="i-del">고른 블럭 삭제</button>`;
+    const d = $('#i-del'); if (d) d.onclick = deleteSelection; return;
+  }
+  const b = blk([...sel.blocks][0]);
+  const flagBlocks = P.blocks.filter(x => x.type === 'flag');
+  let h = `<label class="field"><span>종류</span><select class="in" id="i-type">${Object.entries(TYPES).map(([k,t]) => opt(k, t.label, b.type)).join('')}</select></label>`;
+  if (b.type === 'line' || b.type === 'cond')
+    h += `<div class="row2"><label class="field"><span>캐릭터</span><select class="in" id="i-char">${opt('', '선택 안 함', b.charId || '')}${P.characters.map(c => opt(c.id, c.name, b.charId)).join('')}</select></label>
+      <label class="field"><span>표정</span><select class="in" id="i-expr">${EXPRS.map(x => opt(x.name, x.emoji + ' ' + x.name, b.expr)).join('')}</select></label></div>`;
+  if (b.type === 'flag') h += `<label class="field"><span>고르면 켜지는 플래그</span><input class="in mono" id="i-flag" value="${esc(b.flagName)}"></label>`;
+  if (b.type === 'cond') h += `<label class="field"><span>이 플래그가 켜져 있을 때만 이 길로</span><select class="in" id="i-src">${opt('', '연결 안 됨', b.flagSource || '')}${flagBlocks.map(f => opt(f.id, `${f.flagName} · ${f.text.slice(0,14)}`, b.flagSource)).join('')}</select></label>`;
+  if (b.type === 'end') h += `<label class="field"><span>엔딩 (엔딩 탭에서 만들어요)</span><select class="in" id="i-end">${P.endings.length ? (b.endKey && P.endings.some(e => e.key === b.endKey) ? '' : opt('', '엔딩을 고르세요', '')) + P.endings.map(e => opt(e.key, `${e.desc || '제목 없음'} (${e.file})`, b.endKey)).join('') : opt('', '엔딩 탭에서 먼저 엔딩을 추가하세요', '')}</select></label>`;
+  if (isChoice(b)){
+    const fl = [...new Set(flagBlocks.map(f => f.flagName).filter(Boolean))];
+    h += `<div class="row2"><label class="field"><span>보이는 조건 (선택)</span><select class="in" id="i-show">${opt('', '항상 보임', b.showFlag)}${fl.map(f => opt(f, f, b.showFlag)).join('')}</select></label>
+      <label class="field"><span>상태</span><select class="in" id="i-showst"${b.showFlag ? '' : ' disabled'}>${opt('켜짐', '켜짐일 때', b.showState)}${opt('꺼짐', '꺼짐일 때', b.showState)}</select></label></div>`;
+  }
+  const nm = x => x.desc ? `${x.desc} (${x.key})` : x.key;
+  const bgmOpts = opt('', '바꾸지 않음', b.bgm) + opt('MAIN', 'MAIN (메인 BGM으로)', b.bgm) + opt('STOP', 'STOP (끄기)', b.bgm) + P.sound.bgm.map(s => opt(s.key, nm(s), b.bgm)).join('');
+  h += `<label class="field"><span>배경 (바뀔 때만)</span><select class="in" id="i-bg">${opt('', '바꾸지 않음', b.bg)}${P.backgrounds.map(x => opt(x.key, nm(x), b.bg)).join('')}</select></label>
+    <div class="${b.type === 'line' || b.type === 'cond' ? 'col1' : 'row2'}"><label class="field"><span>BGM (루프)</span><select class="in" id="i-bgm">${bgmOpts}</select></label>
+    ${(b.type === 'line' || b.type === 'cond')
+      ? `<div class="field"><span>SFX</span><div class="sfxrow"><select class="in" id="i-sfx">${opt('', '없음', b.sfx)}${P.sound.sfx.map(s => opt(s.key, nm(s), b.sfx)).join('')}</select>
+         <label class="loopchk" title="이 대사가 나오는 동안 반복 재생"><input type="checkbox" id="i-sfxloop"${b.sfxLoop ? ' checked' : ''}${b.sfx ? '' : ' disabled'}>반복</label></div></div>`
+      : `<label class="field"><span>SFX (1회)</span><select class="in" id="i-sfx">${opt('', '없음', b.sfx)}${P.sound.sfx.map(s => opt(s.key, nm(s), b.sfx)).join('')}</select></label>`}</div>
+    <p class="note" style="margin-top:-4px">배경·사운드 목록은 위쪽 배경·사운드 탭에서 추가해요.</p>
+    <label class="field"><span>장면 이름 (CSV ‘장면’ 열, 표시용)</span><input class="in" id="i-scene" value="${esc(b.scene)}"></label>
+    <label class="field"><span>메모</span><textarea class="in" id="i-memo">${esc(b.memo)}</textarea></label>`;
+  const iss = lastIssues.byBlock.get(b.id) || [];
+  if (iss.length) h += iss.map(i => `<div class="issue ${i.lvl}"><i></i><span>${esc(i.long || i.msg)}</span></div>`).join('');
+  h += `<div class="row2">${!isChoice(b) && !parents(b.id).length ? `<button class="btn" id="i-start">여기서 시작</button>` : '<span></span>'}<button class="btn danger" id="i-del">블럭 삭제</button></div>`;
+  box.innerHTML = h;
+  const on = (id, ev, fn) => { const x = $('#' + id); if (x) x.addEventListener(ev, fn); };
+  on('i-type', 'change', e => setType(b, e.target.value));
+  on('i-char', 'change', e => { b.charId = e.target.value || null; refresh(); });
+  on('i-expr', 'change', e => { b.expr = e.target.value; refresh(); });
+  on('i-flag', 'input', e => { b.flagName = e.target.value.toUpperCase().replace(/\s/g,'_'); e.target.value = b.flagName; scheduleCheck(); });
+  on('i-src', 'change', e => { b.flagSource = e.target.value || null; refresh(); });
+  on('i-end', 'change', e => { const d = P.endings.find(x => x.key === e.target.value); b.endKey = d ? d.key : ''; if (d) b.text = d.desc; refresh({insp:true}); });
+  on('i-bg', 'change', e => { b.bg = e.target.value; refresh(); });
+  on('i-bgm', 'change', e => { b.bgm = e.target.value; refresh(); });
+  on('i-sfx', 'change', e => { b.sfx = e.target.value; if (!b.sfx) b.sfxLoop = false; refresh({insp:true}); });
+  on('i-sfxloop', 'change', e => { b.sfxLoop = e.target.checked; refresh(); });
+  on('i-scene', 'input', e => { b.scene = e.target.value; scheduleCheck(); });
+  on('i-memo', 'input', e => { b.memo = e.target.value; scheduleCheck(); });
+  on('i-show', 'change', e => { b.showFlag = e.target.value; refresh({insp:true}); });
+  on('i-showst', 'change', e => { b.showState = e.target.value; refresh(); });
+  on('i-start', 'click', () => { P.startId = b.id; refresh({insp:true}); });
+  on('i-del', 'click', deleteSelection);
+}
+
+const DEF_EXT = {bgm:'.ogg', sfx:'.wav', bg:''};
+const extOf = f => { const m = /\.[A-Za-z0-9]+$/.exec(f || ''); return m ? m[0] : ''; };
+function renderIssues(){
+  const L = lastIssues.list, errs = L.filter(i => i.lvl === 'err').length;
+  $('#issueCnt').textContent = L.length ? `오류 ${errs} · 주의 ${L.length - errs}` : '';
+  $('#issues').innerHTML = L.length ? L.map(i => {
+      const b = blk(i.id); const who = b ? (b.text.slice(0, 16) || TYPES[b.type].label) : '전체';
+      return `<button class="issue ${i.lvl}" data-id="${i.id || ''}"><i></i><span><b>${esc(who)}</b> ${esc(i.msg)}</span></button>`; }).join('')
+    : '<p class="ok">문제가 없어요. 바로 내보낼 수 있어요.</p>';
+}
+$('#issues').addEventListener('click', e => {
+  const t = e.target.closest('.issue'); const b = blk(t?.dataset.id); if (!b) return;
+  selectOnly([b.id]); refresh({insp:true});
+  const r = ws.getBoundingClientRect(); view.x = r.width / 2 - (b.x + W/2) * view.z; view.y = r.height / 2 - (b.y + 60) * view.z; applyView();
+});
+
+/* ======================= 엑셀 행 만들기 ======================= */
+function linearize(){
+  const rows = [], first = new Map(), work = [], pend = [];
+  const emitted = b => first.has(b.id);
+  const rowOf = b => {
+    if (b.type === 'end') return {type:'엔딩', text:b.text, set_flag:b.endKey};
+    const c = chr(b.charId);
+    return {type:'대사', speaker:c?.name || '', expression:b.expr, text:b.text};
+  };
+  const push = (r, b) => { Object.assign(r, {scene:b?.scene || '', bg:b?.bg || '', bgm:b?.bgm || '', sfx:b?.sfx || '', sfx_loop:b?.sfx && b.sfxLoop && r.type === '대사' ? 'Y' : '', memo:b?.memo || '', src:b?.id || null}); rows.push(r); if (b && !first.has(b.id)) first.set(b.id, r); return r; };
+  // owner 블럭 다음에 이어질 것을 처리. 바로 아래로 흘러갈 블럭을 돌려줌
+  function succ(ownerRow, owner, fall){
+    const c = classify(kids(owner.id));
+    if (c.ch.length && !isChoice(owner)){
+      for (const ch of c.ch){
+        const r = push({type:'선택지', text:ch.text, set_flag:ch.type === 'flag' ? ch.flagName : '', cond_flag:ch.showFlag || '', cond_state:ch.showFlag ? ch.showState : ''}, ch);
+        pend.push([r, ch]);
+      }
+      return null;
+    }
+    let skyList = c.sky, D = c.nor[0];
+    if (skyList.length && !D && lastIssues?.gatePass?.has(owner.id)){ // 검사가 확인한 갈림길: 앞 조건이 모두 꺼졌다면 마지막 갈래가 확실함
+      D = skyList[skyList.length - 1]; skyList = skyList.slice(0, -1);
+      if (!skyList.length){ if (fall && !emitted(D)) return D; ownerRow.nextRef = D; return emitted(D) ? null : D; }
+    }
+    if (skyList.length){
+      let firstBranch = null, lastFlag = '';
+      for (const s of skyList){
+        lastFlag = blk(s.flagSource)?.flagName || '';
+        const r = push({type:'분기', cond_flag:lastFlag, cond_state:'켜짐', nextRef:s, memo:'편집기에서 자동 생성'}, null);
+        r.memo = '편집기에서 자동 생성'; firstBranch = firstBranch || r;
+        if (!emitted(s)) work.push(s);
+      }
+      if (!fall) ownerRow.nextRef = firstBranch;
+      if (D){
+        if (!emitted(D)) return D;
+        const r = push({type:'분기', cond_flag:lastFlag, cond_state:'꺼짐', nextRef:D}, null); r.memo = '편집기에서 자동 생성 (조건이 모두 꺼졌을 때)';
+      }
+      return null;
+    }
+    const n = c.nor[0];
+    if (!n) return null;
+    if (fall && !emitted(n)) return n;
+    ownerRow.nextRef = n;
+    return emitted(n) ? null : n;
+  }
+  function chain(b){
+    while (b && !emitted(b) && !isChoice(b)){
+      const r = push(rowOf(b), b);
+      if (b.type === 'end') break;
+      b = succ(r, b, true);
+    }
+  }
+  const st = lastIssues?.start ? blk(lastIssues.start) : null;
+  if (st) work.push(st);
+  P.blocks.filter(b => !isChoice(b)).sort((a,b) => a.y - b.y || a.x - b.x).forEach(b => work.push(b));
+  while (pend.length || work.length){
+    if (pend.length){ const [r, ch] = pend.shift(); const nx = succ(r, ch, false); if (nx) chain(nx); continue; }
+    chain(work.shift());
+  }
+  rows.forEach((r, i) => r.id = 'S1-' + String((i + 1) * 10).padStart(3, '0'));
+  rows.forEach(r => { if (r.nextRef){ r.next = r.nextRef.id && r.nextRef.type && TYPES[r.nextRef.type] ? (first.get(r.nextRef.id)?.id || '') : r.nextRef.id; } });
+  // 자동 칸 값
+  const S = P.sound, bgmPath = k => { if (!k) return ''; if (k === 'STOP') return 'STOP'; const key = k === 'MAIN' ? S.mainBgm : k; const s = S.bgm.find(x => x.key === key); return s ? S.bgmFolder + s.file : ''; };
+  rows.forEach(r => {
+    const c = P.characters.find(x => x.name === r.speaker);
+    r.portrait = r.speaker && c ? c.path : '';
+    r.expr_code = r.expression ? exprOf(r.expression).code : '';
+    r.bgm_path = bgmPath(r.bgm);
+    const sx = S.sfx.find(x => x.key === r.sfx); r.sfx_path = sx ? S.sfxFolder + sx.file : '';
+    const bad = r.src && (lastIssues.byBlock.get(r.src) || []).some(i => i.lvl === 'err');
+    r.check = bad ? '⚠ 편집기 검사 오류' : '✓';
+    for (const k of ['scene','type','speaker','expression','text','next','cond_flag','cond_state','set_flag','bg','bgm','sfx','sfx_loop','memo']) r[k] = r[k] || '';
+  });
+  return rows;
+}
+
+/* ======================= CSV ======================= */
+const COLS = [['id','ID'],['scene','장면'],['type','구분'],['speaker','캐릭터'],['expression','표정'],['text','텍스트 (대사 / 선택지 문구 / 엔딩 제목)'],
+  ['next','다음 ID'],['cond_flag','조건 플래그'],['cond_state','조건 상태'],['set_flag','켜는 플래그'],['bg','배경'],['bgm','BGM (루프)'],['sfx','SFX'],['sfx_loop','SFX 반복 (Y)'],
+  ['memo','메모'],['portrait','portraitPath (자동)'],['expr_code','표정 코드 (자동)'],['bgm_path','BGM 경로 (자동)'],['sfx_path','SFX 경로 (자동)'],['check','자동 점검']];
+function toCSV(rows){
+  const q = v => { v = String(v ?? ''); return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  const lines = [COLS.map(c => c[0]), COLS.map(c => c[1]), ...rows.map(r => COLS.map(c => r[c[0]]))].map(a => a.map(q).join(','));
+  return '\uFEFF' + lines.join('\r\n') + '\r\n';
+}
+function fileName(ext){ return (P.title || 'dialogue').replace(/[\\/:*?"<>|]/g, '_') + ext; }
+function download(name, blob){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+function confirmIssues(){
+  const n = lastIssues.list.filter(i => i.lvl === 'err').length;
+  return !n || confirm(`오류가 ${n}개 있어요. 그래도 내보낼까요? CSV의 자동 점검 칸에 ⚠로 표시돼요.`);
+}
+
+/* ======================= 버튼 ======================= */
+/* ======================= 저장 / 열기 ======================= */
+function modalOpen(){ return $('#modal').style.display === 'flex'; }
+function showModal(html){ closePop(); $('#mbox').innerHTML = html; $('#modal').style.display = 'flex'; }
+function closeModal(){ $('#modal').style.display = 'none'; $('#mbox').innerHTML = ''; }
+$('#modal').addEventListener('pointerdown', e => { if (e.target.id === 'modal') closeModal(); });
+function infoModal(title, body){
+  showModal(`<h2>${esc(title)}</h2>${body}<div class="mrow"><button class="btn primary" id="m-ok">확인</button></div>`);
+  $('#m-ok').onclick = closeModal; $('#m-ok').focus();
+}
+
+async function saveAs(kind){
+  flushPending(); refresh();
+  if (kind !== 'json' && !confirmIssues()) return;
+  if (kind === 'json') download(fileName('.json'), new Blob([JSON.stringify(P, null, 1)], {type:'application/json'}));
+  if (kind === 'csv') download(fileName('_대사.csv'), new Blob([toCSV(linearize())], {type:'text/csv;charset=utf-8'}));
+  toast({json:'프로젝트 파일을', csv:'게임용 CSV를'}[kind] + ' 저장했어요.');
+}
+$('#openFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const ext = f.name.split('.').pop().toLowerCase();
+  try {
+    let res;
+    if (ext === 'json'){
+      let d; try { d = JSON.parse(await f.text()); } catch { throw new Error('JSON 형식이 올바르지 않아요.'); }
+      if (!d.blocks || !d.edges) throw new Error('이 편집기에서 저장한 프로젝트 파일이 아니에요.');
+      res = {project:d, warnings:[]};
+    } else if (ext === 'csv'){
+      res = importCsv(await f.text());
+    } else throw new Error('.json, .csv 파일만 열 수 있어요.');
+    if (!res.project.title) res.project.title = f.name.replace(/\.[^.]+$/, '');
+    load(res.project);
+    if (res.warnings.length) infoModal(`불러왔어요. 확인할 점이 ${res.warnings.length}개 있어요`, `<ul>${res.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul>`);
+    else toast(`${f.name}을(를) 불러왔어요.`);
+  } catch (err){
+    infoModal('파일을 열 수 없어요', `<p>${esc(err.message || String(err))}</p><p style="font-size:12.5px">지금 작업은 그대로 남아 있어요.</p>`);
+  }
+};
+
+/* ---------- 엑셀·CSV → 플로우차트 ---------- */
+const REQ_KEYS = ['id','type','speaker','expression','text','next','cond_flag','cond_state','set_flag'];
+function checkKeys(keys){
+  const miss = REQ_KEYS.filter(k => !keys.includes(k));
+  if (miss.length) throw new Error(`이 편집기의 다이얼로그 구조가 아니에요. 대사 시트 1행에 ${miss.join(', ')} 열이 없어요.`);
+}
+function parseCSV(t){
+  t = t.replace(/^\uFEFF/, ''); const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < t.length; i++){
+    const c = t[i];
+    if (q){ if (c === '"'){ if (t[i + 1] === '"'){ f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ','){ row.push(f); f = ''; }
+    else if (c === '\n'){ row.push(f); rows.push(row); row = []; f = ''; }
+    else if (c !== '\r') f += c;
+  }
+  if (f !== '' || row.length){ row.push(f); rows.push(row); }
+  return rows;
+}
+function splitPath(p){ p = p || ''; const i = p.lastIndexOf('/'); return i >= 0 ? [p.slice(0, i + 1), p.slice(i + 1)] : ['', p]; }
+function importCsv(text){
+  const all = parseCSV(text); if (!all.length) throw new Error('빈 파일이에요.');
+  const keys = all[0].map(k => k.trim()); checkKeys(keys);
+  const rows = all.slice(1).map(r => Object.fromEntries(keys.map((k, j) => [k, (r[j] ?? '').trim()]))).filter(o => o.id && o.id !== 'ID');
+  if (!rows.length) throw new Error('대사 데이터가 없어요.');
+  return rowsToProject(rows, deriveMeta(rows, {}));
+}
+function deriveMeta(rows, m){
+  m.characters = m.characters || [];
+  if (!m.sound){
+    const S = {bgmFolder:'Sounds/BGM/', sfxFolder:'Sounds/SFX/', mainBgm:'', bgm:[], sfx:[]}; let mainPath = '';
+    for (const r of rows){
+      if (r.bgm && r.bgm_path && r.bgm_path !== 'STOP'){ const [f, n] = splitPath(r.bgm_path);
+        if (r.bgm === 'MAIN') mainPath = r.bgm_path; else if (!S.bgm.some(x => x.key === r.bgm)){ if (f) S.bgmFolder = f; S.bgm.push({key:r.bgm, file:n, desc:''}); } }
+      if (r.sfx && r.sfx_path){ const [f, n] = splitPath(r.sfx_path); if (!S.sfx.some(x => x.key === r.sfx)){ if (f) S.sfxFolder = f; S.sfx.push({key:r.sfx, file:n, desc:''}); } }
+    }
+    if (mainPath){ const [, n] = splitPath(mainPath); const hit = S.bgm.find(x => x.file === n); if (hit) S.mainBgm = hit.key; else { S.bgm.unshift({key:'bgm_main', file:n, desc:'메인 BGM'}); S.mainBgm = 'bgm_main'; } }
+    rows.forEach(r => { if (r.bgm && !['MAIN','STOP'].includes(r.bgm) && !S.bgm.some(x => x.key === r.bgm)) S.bgm.push({key:r.bgm, file:r.bgm + '.ogg', desc:''});
+      if (r.sfx && !S.sfx.some(x => x.key === r.sfx)) S.sfx.push({key:r.sfx, file:r.sfx + '.wav', desc:''}); });
+    if (!S.mainBgm && S.bgm[0]) S.mainBgm = S.bgm[0].key;
+    m.sound = S;
+  }
+  if (!m.backgrounds){ m.bgFolder = 'Backgrounds/'; m.backgrounds = []; rows.forEach(r => { if (r.bg && !m.backgrounds.some(x => x.key === r.bg)) m.backgrounds.push({key:r.bg, file:r.bg, desc:''}); }); }
+  return m;
+}
+
+/* 층별 자동 배치: 합류 지점은 갈래들보다 아래, 형제(선택지·분기)는 순서대로 왼쪽→오른쪽 */
+function autoLayout(B, order, start){
+  const ids = B.map(b => b.id), byId = new Map(B.map(b => [b.id, b]));
+  const kidsOf = id => order.get(id) || [];
+  const state = new Map(), post = [], back = new Set();
+  function dfs(u){ state.set(u, 1); for (const v of kidsOf(u)){ if (state.get(v) === 1) back.add(u + '>' + v); else if (!state.has(v)) dfs(v); } state.set(u, 2); post.push(u); }
+  if (start) dfs(start.id); for (const id of ids) if (!state.has(id)) dfs(id);
+  const topo = post.slice().reverse(), rank = new Map(ids.map(i => [i, 0]));
+  for (const u of topo) for (const v of kidsOf(u)) if (!back.has(u + '>' + v)) rank.set(v, Math.max(rank.get(v), rank.get(u) + 1));
+  const layers = []; for (const u of topo){ const r = rank.get(u); (layers[r] = layers[r] || []).push(u); }
+  const parentsOf = new Map(ids.map(i => [i, []]));
+  for (const u of ids) kidsOf(u).forEach((v, ix, arr) => { if (!back.has(u + '>' + v)) parentsOf.get(v).push([u, ix, arr.length]); });
+  const X = new Map(), GAP = W + 60;
+  layers.forEach((L, r) => {
+    if (!L) return;
+    const items = L.map((id, k) => {
+      const ps = parentsOf.get(id).filter(([p]) => X.has(p));
+      const t = ps.length ? ps.reduce((s, [p, ix, n]) => s + X.get(p) + (ix - (n - 1) / 2) * GAP, 0) / ps.length : k * GAP * 2;
+      return {id, t, tie: ps.length ? ps[0][1] : k};
+    }).sort((a, b) => a.t - b.t || a.tie - b.tie);
+    let prev = -Infinity; for (const it of items){ const x = Math.max(it.t, prev + GAP); X.set(it.id, x); prev = x; }
+  });
+  const est = b => Math.max(96, 46 + 22 * Math.ceil(Math.max(1, (b.text || '').length) / 17));
+  let y = 0;
+  layers.forEach(L => { if (!L) return; let mh = 0; for (const id of L){ const b = byId.get(id); b.x = Math.round(X.get(id)); b.y = y; mh = Math.max(mh, est(b)); } y += mh + 80; });
+}
+function rowsToProject(rows0, meta){
+  const warns = []; const warn = t => { if (!warns.includes(t)) warns.push(t); };
+  const F = ['id','scene','type','speaker','expression','text','next','cond_flag','cond_state','set_flag','bg','bgm','sfx','sfx_loop','memo','portrait','bgm_path','sfx_path'];
+  let rows = rows0.map(r => Object.fromEntries(F.map(k => [k, String(r[k] ?? '').trim()])));
+  const ik = id => { const m = /^S(\d+)-(\d+)$/.exec(id); return m ? [+m[1], +m[2]] : null; };
+  if (rows.every(r => ik(r.id))) rows.sort((a, b) => { const x = ik(a.id), y = ik(b.id); return x[0] - y[0] || x[1] - y[1]; });
+  else warn('ID가 S1-010 형식이 아닌 줄이 있어 파일의 줄 순서대로 읽었어요.');
+  const idx = new Map(rows.map((r, i) => [r.id, i]));
+  // 캐릭터
+  const chars = meta.characters.slice(), byName = n => chars.find(c => c.name === n);
+  rows.forEach(r => { if (r.type === '대사' && r.speaker && !byName(r.speaker)) chars.push({id:uid(), name:r.speaker, path:r.portrait || 'Characters/', img:'', player:false}); });
+  if (!chars.some(c => c.player)){ const pc = byName('주인공'); if (pc) pc.player = true; }
+  // 블럭
+  const B = [], E = [], at = new Map(), order = new Map();
+  rows.forEach((r, i) => {
+    let o = null;
+    if (r.type === '대사'){
+      const ex = EXPRS.find(x => x.name === r.expression);
+      if (r.expression && !ex) warn(`표정 ‘${r.expression}’은(는) 편집기의 표정 6개에 없어서 ‘기본’으로 바꿨어요.`);
+      if (r.set_flag) warn(`${r.id}: 대사 줄의 ‘켜는 플래그’(${r.set_flag})는 편집기에서 선택지로만 켤 수 있어 빠졌어요.`);
+      o = {type:'line', charId:byName(r.speaker)?.id || null, expr:ex ? ex.name : '기본'};
+    } else if (r.type === '선택지') o = {type:r.set_flag ? 'flag' : 'choice', flagName:r.set_flag, showFlag:r.cond_flag, showState:r.cond_state || '켜짐'};
+    else if (r.type === '엔딩') o = {type:'end', endKey:r.set_flag};
+    else if (r.type !== '분기') warn(`${r.id}: 알 수 없는 구분 ‘${r.type}’이라 건너뛰었어요.`);
+    if (o){ const b = Object.assign({}, BLOCK_DEFAULT, {id:uid(), text:r.text, bg:r.bg, bgm:r.bgm, sfx:r.sfx, sfxLoop:!!r.sfx && r.type === '대사' && /^(y|yes|o|1|true|반복)$/i.test(r.sfx_loop), memo:r.memo, scene:r.scene}, o); B.push(b); at.set(i, b); }
+  });
+  const purple = flag => B.find(b => b.type === 'flag' && b.flagName === flag);
+  // 흐름 해석: 어떤 줄에서 시작하면 실제로 어디로 가는지 (분기·조건 줄은 갈림길로)
+  const memo = new Map(), busy = new Set();
+  const br = (flag, on, off) => { if (on?.br && on.flag === flag) on = on.on; if (off?.br && off.flag === flag) off = off.off; return {br:true, flag, on, off}; };
+  function entry(i){
+    if (i == null || i < 0 || i >= rows.length) return null;
+    if (memo.has(i)) return memo.get(i);
+    if (busy.has(i)){ warn(`${rows[i].id}: 분기 줄끼리 서로를 가리켜서 일부 연결을 건너뛰었어요.`); return null; }
+    busy.add(i); const r = rows[i]; let n;
+    if (r.type === '분기'){
+      if (!r.cond_flag || !idx.has(r.next)){ warn(`${r.id}: 조건이나 다음 ID가 빠진 분기 줄이라 무시했어요.`); n = entry(i + 1); }
+      else { const jump = entry(idx.get(r.next)), fall = entry(i + 1); n = r.cond_state === '꺼짐' ? br(r.cond_flag, fall, jump) : br(r.cond_flag, jump, fall); }
+    } else if (r.type === '대사' && r.cond_flag){
+      const self = {blk:at.get(i)}, skip = entry(i + 1);
+      n = r.cond_state === '꺼짐' ? br(r.cond_flag, skip, self) : br(r.cond_flag, self, skip);
+    } else n = at.has(i) ? {blk:at.get(i)} : entry(i + 1);
+    busy.delete(i); memo.set(i, n); return n;
+  }
+  const link = (a, b) => { if (!a || !b || a === b || E.some(e => e.from === a.id && e.to === b.id)) return;
+    E.push({id:uid(), from:a.id, to:b.id}); if (!order.has(a.id)) order.set(a.id, []); order.get(a.id).push(b.id); };
+  function connect(parent, node, where){
+    if (!node) return;
+    if (node.blk){ link(parent, node.blk); return; }
+    const sky = []; let cur = node;
+    while (cur?.br){ sky.push(cur); cur = cur.off; }
+    if (cur?.blk) link(parent, cur.blk); else warn(`${where}: 조건이 모두 꺼졌을 때 이어질 줄이 없어요.`);
+    for (const s of sky){
+      let t = s.on; while (t?.br){ warn(`${where}: 분기 안의 분기는 바깥 조건 하나로 단순화했어요.`); t = t.on; }
+      const tb = t?.blk; if (!tb) continue;
+      if (tb.type === 'line' || tb.type === 'cond'){
+        if (tb._flag && tb._flag !== s.flag) warn(`${where}: 한 대사가 서로 다른 조건(${tb._flag}, ${s.flag})으로 열려서 앞의 조건만 남겼어요.`);
+        else { tb.type = 'cond'; tb._flag = s.flag; const src = purple(s.flag); tb.flagSource = src ? src.id : null;
+          if (!src) warn(`${s.flag}을(를) 켜는 선택지가 없어서 분기 시작 블럭이 조건에 연결되지 않았어요.`); }
+      } else warn(`${where}: 조건이 맞을 때 가는 곳이 대사가 아니어서 조건 없이 연결했어요.`);
+      link(parent, tb);
+    }
+  }
+  rows.forEach((r, i) => {
+    const b = at.get(i); if (!b || b.type === 'end') return;
+    if (r.type === '대사' && !r.next && rows[i + 1]?.type === '선택지'){
+      for (let j = i + 1; j < rows.length && rows[j].type === '선택지'; j++) link(b, at.get(j));
+      return;
+    }
+    if (r.type === '선택지' && !r.next){ warn(`${r.id}: 선택지에 다음 ID가 없어요.`); return; }
+    if (r.next && !idx.has(r.next)){ warn(`${r.id}: 다음 ID ${r.next}이(가) 파일에 없어요.`); return; }
+    connect(b, entry(r.next ? idx.get(r.next) : i + 1), r.id);
+  });
+  // 배치
+  const firstI = rows.findIndex((r, i) => at.has(i)); const start = at.get(firstI);
+  autoLayout(B, order, start);
+  return {project:{title:meta.title || '', startId:start?.id || null, characters:chars, blocks:B, edges:E, sound:meta.sound, bgFolder:meta.bgFolder ?? 'Backgrounds/', backgrounds:meta.backgrounds}, warnings:warns};
+}
+
+function addBlockAtCenter(){
+  closePop(); if (linkFrom) endLink();
+  const r = ws.getBoundingClientRect(); const p = toWorld(r.left + r.width / 2, r.top + r.height / 2);
+  let x = p.x - W/2, y = p.y - 50;
+  while (P.blocks.some(o => Math.abs(o.x - x) < 40 && Math.abs(o.y - y) < 40)){ x += 30; y += 30; }
+  const b = newBlock(x, y); selectOnly([b.id]); refresh({insp:true}); requestAnimationFrame(() => startEdit(b));
+}
+$('#addBtn').onclick = addBlockAtCenter;
+$('#undoBtn').onclick = undo; $('#redoBtn').onclick = redo;
+$('#lclose').onclick = () => { sel.blocks.clear(); sel.edge = null; refresh({insp:true}); };
+$('#fitBtn').onclick = fitView;
+$('#zoomIn').onclick = () => { const r = ws.getBoundingClientRect(); zoomAt(1.2, r.left + r.width/2, r.top + r.height/2); };
+$('#zoomOut').onclick = () => { const r = ws.getBoundingClientRect(); zoomAt(1/1.2, r.left + r.width/2, r.top + r.height/2); };
+$('#title').addEventListener('input', e => { P.title = e.target.value; scheduleCheck(); if (curTab === 'ui') renderStages(); });
+$('#title').addEventListener('keydown', e => e.stopPropagation());
+let toastT = 0;
+function toast(m){ const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2200); }
+
+
+/* ======================= 탭 ======================= */
+let curTab = 'dialog', needFit = false;
+const TAB_SCOPE = {chars:'캐릭터 (Characters 폴더)', ui:'UI (UI 폴더)', bg:'배경 (Backgrounds 폴더)', sound:'사운드 (Sounds/BGM, Sounds/SFX 폴더)', ending:'엔딩 (Endings 폴더)', dialog:'대사 (Dialog 폴더)'};
+const ALL_SCOPES = ['chars', 'ui', 'bg', 'sound', 'ending', 'dialog'];
+function switchTab(t){
+  curTab = t; closePop();
+  document.querySelectorAll('#tabbar .tab').forEach(b => { const on = b.dataset.tab === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + t));
+  if (t === 'dialog'){
+    P.blocks.forEach(updateBlock); applyView(); drawEdges();
+    if (needFit){ needFit = false; fitView(); }
+  }
+  if (t === 'ui') fitStages();
+  if (t !== 'sound') stopSound();
+}
+document.querySelectorAll('#tabbar .tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+/* ======================= 이름 규칙 ======================= */
+const RE_EN = /^[A-Za-z0-9_-]+$/;
+const NARRATORS = ['내레이터'];
+const IMG_EXT = '.png';
+const AUDIO_EXT = ['.ogg', '.mp3', '.wav', '.m4a', '.aac', '.flac'];
+const CHAR_SIZE = {w:1280, h:720, fit:'contain'}, BG_SIZE = {w:1280, h:720, fit:'cover'};
+const UI_ITEMS = [
+  {name:'DialogBox', label:'대사창', w:1184, h:196, fit:'fill'},
+  {name:'NameBox', label:'이름표', w:168, h:44, fit:'fill'},
+  {name:'ChoiceButton', label:'선택지', w:760, h:64, fit:'fill'},
+  {name:'ChoiceButtonSelected', label:'고른 선택지', w:760, h:64, fit:'fill'},
+  {name:'SettingButton', label:'설정 버튼', w:56, h:56, fit:'fill'},
+  {name:'TitleBackground', label:'메인 화면 배경', w:1280, h:720, fit:'cover'},
+  {name:'TitleLogo', label:'메인 화면 로고', w:900, h:300, max:true},
+  {name:'EndingButton', label:'엔딩 확인 버튼', w:220, h:60, fit:'fill'}];
+const EDITOR_DATA = 'editor-data.json';
+const charEng = c => (c.path || '').split('/').filter(Boolean).pop() || '';
+const charDir = c => 'Characters/' + charEng(c);
+const charImg = (c, code) => `${charDir(c)}/${code}${(c.ext && c.ext[code]) || IMG_EXT}`; // 움직이는 이미지는 .gif/.webp
+const isNarr = c => !!c && (NARRATORS.includes(c.name) || /^narrator$/i.test(charEng(c)));
+const bgFile = b => 'Backgrounds/' + b.file + (b.ext || IMG_EXT);
+const sndFolder = kind => kind === 'bgm' ? 'Sounds/BGM/' : 'Sounds/SFX/';
+const sndPath = (kind, s) => sndFolder(kind) + s.file;
+const sndBase = s => (s.file || '').replace(/\.[^.]+$/, '');
+const uiPath = n => 'UI/' + n + IMG_EXT;
+const endFile = d => 'Endings/' + d.file + (d.ext || IMG_EXT); // 게임 규칙: ENDING_XXX → Endings/XXX.png(.gif/.webp)
+const RE_END_EN = /^[A-Z0-9_]+$/;
+// 글꼴: 게임의 Fonts 폴더. 없으면 게임은 Noto Sans KR을 씀
+const FONT_ITEMS = [
+  {name:'Regular', label:'기본 글꼴', use:'대사·선택지', weight:'400'},
+  {name:'Bold', label:'굵은 글꼴', use:'이름표·메뉴', weight:'700'},
+  {name:'ExtraBold', label:'아주 굵은 글꼴', use:'메인 화면 제목', weight:'800 900'}];
+const fontPath = n => 'Fonts/' + n + '.ttf';
+// 화면 배치·글자 설정 기본값 (게임 index.html의 DEFAULT_LAYOUT과 같아야 함)
+const DEFAULT_LAYOUT = {
+  dialogBox:{x:48, y:488, w:1184, h:196}, dialogText:{x:96, y:508, w:1088, h:132},
+  nameBox:{x:48, y:444, w:168, h:44}, choice:{x:260, y:388, w:760, h:64},
+  settingButton:{x:1200, y:24, w:56, h:56}, titleLogo:{x:96, y:120, w:900, h:300}, titleMenu:{x:96, y:439},
+  endingTitle:{x:140, y:220, w:1000, h:220}, endingButton:{x:530, y:500, w:220, h:60},
+  fonts:{dialog:{size:32, color:''}, name:{size:32, color:''}, choice:{size:32, color:''}, title:{size:104, color:''}, menu:{size:28, color:''}, ending:{size:64, color:''}, endButton:{size:20, color:''}}
+};
+function mergeLayout(src){
+  const d = JSON.parse(JSON.stringify(DEFAULT_LAYOUT));
+  if (!src || typeof src !== 'object') return d;
+  const num = (v, min, max) => Number.isFinite(+v) ? Math.min(max, Math.max(min, Math.round(+v))) : null;
+  for (const k of Object.keys(d)){
+    if (k === 'fonts'){
+      for (const f of Object.keys(d.fonts)){ const sf = src.fonts?.[f]; if (!sf) continue;
+        const sz = num(sf.size, 8, 300); if (sz) d.fonts[f].size = sz;
+        if (typeof sf.color === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(sf.color.trim())) d.fonts[f].color = sf.color.trim().toLowerCase(); }
+      continue;
+    }
+    if (!src[k]) continue;
+    for (const p of Object.keys(d[k])){ const v = num(src[k][p], -2000, 4000); if (v !== null) d[k][p] = v; }
+  }
+  return d;
+}
+const NAME_MAX = 30; // 대사 글자 수는 dialogMax()가 글자 영역·크기로 계산
+const charLen = t => Array.from(t || '').length;
+function splitLabel(v){
+  const i = v.indexOf('/');
+  return i < 0 ? {ko:v.trim(), en:null} : {ko:v.slice(0, i).trim(), en:v.slice(i + 1).trim()};
+}
+const labelHtml = (ko, en) => `${esc(ko || '이름 없음')}<span>/${esc(en || '')}</span>`;
+function hashText(s){ let h = 0x811c9dc5; for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(16); }
+
+/* ======================= 리소스 보관함 =======================
+   칸마다 { blob, handle, url, dims, path }
+   path   = 게임 폴더에 지금 저장돼 있는 위치 (없으면 아직 저장 안 한 새 파일)
+   handle = 불러오기 때 받아 둔 파일 핸들. 내용은 화면에 보일 때 처음 읽음 */
+const RES = new Map();
+const KEY = {char:(c, code) => `char:${c.id}:${code}`, bg:b => `bg:${b.id}`, snd:(k, s) => `${k}:${s.id}`, ui:n => `ui:${n}`, font:n => `font:${n}`, end:d => `end:${d.id}`};
+const scopeOfKey = k => k.startsWith('char:') ? 'chars' : k.startsWith('bg:') ? 'bg' : k.startsWith('end:') ? 'ending' : (k.startsWith('ui:') || k.startsWith('font:')) ? 'ui' : 'sound';
+// 변경 기록: 저장할 때 폴더를 훑지 않고 이것만 처리함
+const DIRTY = new Set();       // 저장 전 칸 (새로 고른 파일, 이름이 바뀐 항목)
+const DEL = new Map();         // 지울 파일 경로 → {scope, key}
+const DELDIRS = new Map();     // 지울 캐릭터 폴더 → {recursive}
+const SAVED_DIRS = new Set();  // 폴더에 있는 캐릭터 폴더 (소문자)
+const THUMBS = new Map();      // 캐릭터 id → 미리보기 (되돌리기 기록에는 넣지 않음)
+function setRes(key, blob, path, dims){
+  const old = RES.get(key); if (old?.url) URL.revokeObjectURL(old.url);
+  if (old?.path && !path) DEL.set(old.path, {scope:scopeOfKey(key), key}); // 새 파일로 바꾸면 옛 파일은 지울 목록에 (같은 이름이면 덮어써서 안 지움)
+  RES.set(key, {blob, handle:null, url:URL.createObjectURL(blob), dims:dims || null, path:path || null});
+  if (!path) DIRTY.add(key);
+}
+function setResHandle(key, handle, path){
+  const old = RES.get(key); if (old?.url) URL.revokeObjectURL(old.url);
+  RES.set(key, {blob:null, handle, url:null, dims:null, path});
+}
+function dropRes(test){ for (const [k, v] of [...RES]) if (test(k)){ if (v.url) URL.revokeObjectURL(v.url); RES.delete(k); DIRTY.delete(k); } }
+const resOf = key => RES.get(key);
+const pendingOf = (key, target) => { const e = RES.get(key); return !!e && e.path !== target; };
+function markDirty(keys){ keys.forEach(k => { if (RES.has(k)) DIRTY.add(k); }); }
+function journalDelete(keys){ keys.forEach(k => { const e = RES.get(k); if (e?.path) DEL.set(e.path, {scope:scopeOfKey(k), key:k}); }); }
+const charKeys = c => EXPRS.map(x => KEY.char(c, x.code));
+function aliveTarget(key){ // 칸이 아직 에디터에 있으면 그 칸이 저장될 경로
+  const [kind, id, code] = key.split(':');
+  if (kind === 'char'){ const c = chr(id); return c && !isNarr(c) ? charImg(c, code) : null; }
+  if (kind === 'bg'){ const b = P.backgrounds.find(x => x.id === id); return b ? bgFile(b) : null; }
+  if (kind === 'bgm' || kind === 'sfx'){ const s = P.sound[kind].find(x => x.id === id); return s ? sndPath(kind, s) : null; }
+  if (kind === 'ui') return uiPath(id);
+  if (kind === 'font') return fontPath(id);
+  if (kind === 'end'){ const d = P.endings.find(x => x.id === id); return d ? endFile(d) : null; }
+  return null;
+}
+// 필요할 때만 파일 내용 읽기 (화면에 보이는 칸, 블럭 썸네일, 미리 듣기)
+const hydrating = new Map();
+function hydrate(key){
+  const e = RES.get(key); if (!e || e.url) return Promise.resolve(e);
+  if (hydrating.has(key)) return hydrating.get(key);
+  const p = (async () => {
+    const f = e.blob || await e.handle.getFile();
+    e.blob = f; e.url = URL.createObjectURL(f);
+    if (scopeOfKey(key) !== 'sound' && !key.startsWith('font:')) e.dims = await imageDims(f);
+    if (key.startsWith('char:')) try { e.thumb = await makeThumb(f); } catch {}
+    hydrating.delete(key); scheduleRepaint(scopeOfKey(key)); return e;
+  })().catch(() => { hydrating.delete(key); });
+  hydrating.set(key, p); return p;
+}
+const io = new IntersectionObserver(list => list.forEach(en => { if (en.isIntersecting){ io.unobserve(en.target); hydrate(en.target.dataset.hk); } }), {rootMargin:'400px'});
+function observeHydrate(root){ root.querySelectorAll('[data-hk]').forEach(el => io.observe(el)); }
+const repaintQ = new Set(); let repaintRaf = 0;
+function scheduleRepaint(scope){
+  repaintQ.add(scope); if (repaintRaf) return;
+  repaintRaf = requestAnimationFrame(() => {
+    repaintRaf = 0; const q = new Set(repaintQ); repaintQ.clear();
+    if (q.has('chars')){ if (curTab === 'chars') renderCharsTab(); if (curTab === 'dialog') P.blocks.forEach(updateBlock); }
+    if (q.has('bg') && curTab === 'bg') renderBgTab();
+    if (q.has('ending')){ if (curTab === 'ending') renderEndTab(); if (curTab === 'ui') renderStages(); }
+    if (q.has('ui') && curTab === 'ui') renderUiTab();
+    if (q.has('sound') && curTab === 'sound') renderSoundTab();
+  });
+}
+const editingIn = sel => { const a = document.activeElement; return !!a && a.classList.contains('nmedit') && !a.dataset.done && !!a.closest(sel); };
+function charThumb(c, exprName){
+  if (!c) return '';
+  for (const code of [exprOf(exprName).code, 'default']){ const k = KEY.char(c, code), e = RES.get(k); if (e){ if (e.url) return e.thumb || e.url; hydrate(k); } }
+  return THUMBS.get(c.id) || c.img || '';
+}
+async function pool(items, n, fn){ // 동시에 n개씩 처리
+  const out = new Array(items.length); let i = 0;
+  await Promise.all(Array.from({length:Math.min(n, items.length)}, async () => { while (i < items.length){ const j = i++; out[j] = await fn(items[j], j); } }));
+  return out;
+}
+
+/* ======================= 게임 폴더 (File System Access) ======================= */
+const FS = {supported: typeof window.showDirectoryPicker === 'function', root:null, pending:null, name:'', last:null};
+const idb = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => { const r = indexedDB.open('vn-dialogue-editor', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
+  const run = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => { const st = db.transaction('kv', mode).objectStore('kv'); const q = fn(st); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); };
+  return {get:k => run('readonly', s => s.get(k)), set:(k, v) => run('readwrite', s => s.put(v, k)), del:k => run('readwrite', s => s.delete(k))};
+})();
+function updateFolderUI(){
+  const b = $('#folderBtn'), l = $('#folderLbl');
+  b.classList.toggle('ok', !!FS.root); b.classList.toggle('pending', !FS.root && !!FS.pending);
+  l.textContent = FS.root ? '폴더 연결' : FS.pending ? '다시 연결' : '폴더 연결';
+  b.title = !FS.supported ? '이 브라우저는 폴더 연결을 지원하지 않아요 (크롬·엣지 사용)' : FS.root ? `연결된 게임 폴더: ${FS.name}` : FS.pending ? `‘${FS.pending.name}’ 폴더를 다시 연결해요` : '리소스를 저장할 게임 폴더(index.html이 있는 폴더)를 골라요';
+  $('#gameFolderBtn').disabled = !FS.root;
+  $('#loadBtn').disabled = !FS.root;
+  $('#loadBtn').title = FS.root ? `게임 폴더 ‘${FS.name}’에서 불러오기` : '게임 폴더를 연결하면 쓸 수 있어요';
+  $('#gameFolderBtn').title = FS.root ? `게임 폴더 ‘${FS.name}’ 보기` : '게임 폴더를 연결하면 쓸 수 있어요';
+}
+async function getDir(path, create){
+  let d = FS.root;
+  for (const p of path.split('/').filter(Boolean)) d = await d.getDirectoryHandle(p, {create:!!create});
+  return d;
+}
+async function dirOf(path, create){
+  const parts = path.split('/').filter(Boolean), file = parts.pop();
+  return [await getDir(parts.join('/'), create), file];
+}
+async function readFile(path){
+  if (!FS.root) return null;
+  try { const [d, f] = await dirOf(path, false); return await (await d.getFileHandle(f)).getFile(); } catch { return null; }
+}
+async function writeFile(path, blob){
+  const [d, f] = await dirOf(path, true);
+  const w = await (await d.getFileHandle(f, {create:true})).createWritable();
+  await w.write(blob); await w.close();
+}
+async function removeFile(path){
+  try { const [d, f] = await dirOf(path, false); await d.removeEntry(f); return true; } catch { return false; }
+}
+async function imageDims(blob){
+  try { const bm = await createImageBitmap(blob); const d = {w:bm.width, h:bm.height}; bm.close?.(); return d; } catch { return null; }
+}
+async function useRoot(h){
+  let same = false; try { same = !!FS.last && await FS.last.isSameEntry(h); } catch {}
+  if (!same) resetSync(); // 다른 폴더: 그 폴더에는 아직 아무것도 저장하지 않은 상태
+  FS.root = h; FS.last = h; FS.pending = null; FS.name = h.name; updateFolderUI(); refresh({side:true});
+}
+function resetSync(){
+  for (const [k, e] of RES) if (e.path){ e.path = null; DIRTY.add(k); }
+  DEL.clear(); DELDIRS.clear(); SAVED_DIRS.clear(); SYNC.csvHash = null; SYNC.snap = {}; SYNC.layout = null; EDATA = null;
+}
+async function connectFolder(){
+  let h;
+  try { h = await window.showDirectoryPicker({id:'vn-game-root', mode:'readwrite'}); }
+  catch (err){ if (err?.name !== 'AbortError') toast('폴더를 열 수 없어요: ' + (err?.message || err)); return false; }
+  let hasIndex = true; try { await h.getFileHandle('index.html'); } catch { hasIndex = false; }
+  if (!hasIndex && !(await confirmModal('index.html이 없는 폴더예요',
+      `<p>‘${esc(h.name)}’ 안에 게임 파일(index.html)이 없어요. 리소스는 이 폴더 안에 Characters, UI 같은 폴더로 저장돼요.</p><p>게임의 index.html이 들어 있는 폴더를 고르는 걸 권장해요.</p>`, '이 폴더 사용'))) return false;
+  try { await idb.set('root', h); } catch {}
+  await useRoot(h); toast(`게임 폴더 ‘${h.name}’를 연결했어요. 폴더 내용을 가져오려면 ‘불러오기’를 누르세요.`);
+  return true;
+}
+async function reconnect(){
+  const h = FS.pending; if (!h) return connectFolder();
+  try { if (await h.requestPermission({mode:'readwrite'}) === 'granted'){ await useRoot(h); toast(`게임 폴더 ‘${h.name}’를 다시 연결했어요.`); return true; } } catch {}
+  toast('권한을 받지 못했어요. 폴더를 다시 골라 주세요.'); return false;
+}
+async function restoreRoot(){
+  if (!FS.supported){ updateFolderUI(); return; }
+  try {
+    const h = await idb.get('root'); if (!h){ updateFolderUI(); return; }
+    if (await h.queryPermission({mode:'readwrite'}) === 'granted') await useRoot(h);
+    else { FS.pending = h; updateFolderUI(); }
+  } catch { updateFolderUI(); }
+}
+async function disconnect(){
+  FS.root = null; FS.pending = null; FS.name = '';
+  try { await idb.del('root'); } catch {}
+  updateFolderUI(); refresh(); toast('게임 폴더 연결을 끊었어요. 고른 파일은 에디터에 그대로 남아 있어요.');
+}
+$('#folderBtn').onclick = () => {
+  if (!FS.supported){
+    infoModal('이 브라우저는 폴더 연결을 지원하지 않아요', `<p>게임 폴더에 바로 불러오고 저장하려면 크롬이나 엣지에서 이 파일을 여세요.</p><p>지금 브라우저에서는 ‘저장’ 창의 ‘파일로 내보내기’로 프로젝트·CSV를 내려받을 수 있어요.</p>`);
+    return;
+  }
+  if (FS.root){
+    openPop($('#folderBtn'), `<div class="menu-cap">연결된 폴더: <b>${esc(FS.name)}</b></div>
+      <button class="menu-item" data-v="change"><span>다른 폴더 연결</span></button>
+      <button class="menu-item" data-v="off"><span>연결 끊기</span></button>`,
+      v => { if (v === 'change') connectFolder(); if (v === 'off') disconnect(); });
+    return;
+  }
+  if (FS.pending) reconnect(); else connectFolder();
+};
+function confirmModal(title, body, okLabel){
+  return new Promise(res => {
+    showModal(`<h2>${esc(title)}</h2>${body}<div class="mrow"><button class="btn" id="m-no">취소</button><button class="btn primary" id="m-yes">${esc(okLabel || '확인')}</button></div>`);
+    $('#m-no').onclick = () => { closeModal(); res(false); };
+    $('#m-yes').onclick = () => { closeModal(); res(true); };
+    $('#m-yes').focus();
+  });
+}
+
+/* ---------- 게임폴더 열기: 지금 연결된 폴더가 어디인지 보여 주기 ---------- */
+const MANAGED = ['Characters', 'UI', 'Backgrounds', 'Sounds', 'Dialog'];
+$('#gameFolderBtn').onclick = async () => {
+  if (!FS.root) return;
+  const lines = []; let count = 0;
+  async function walk(h, depth){
+    const items = []; for await (const [n, c] of h.entries()) items.push([n, c]);
+    items.sort((a, b) => (a[1].kind === b[1].kind ? a[0].localeCompare(b[0]) : a[1].kind === 'directory' ? -1 : 1));
+    for (const [n, c] of items){
+      if (++count > 400){ if (count === 401) lines.push(`<li class="more">…파일이 많아 일부만 보여요</li>`); return; }
+      if (c.kind === 'directory'){
+        const tag = depth === 0 && MANAGED.includes(n) ? '<em>에디터가 관리</em>' : '';
+        lines.push(`<li style="--d:${depth}"><span class="fi d">▸</span>${esc(n)}/ ${tag}</li>`);
+        if (depth < 2) await walk(c, depth + 1);
+      } else lines.push(`<li style="--d:${depth}"><span class="fi">·</span>${esc(n)}</li>`);
+    }
+  }
+  try { await walk(FS.root, 0); } catch (err){ infoModal('폴더를 읽지 못했어요', `<p>${esc(err?.message || err)}</p>`); return; }
+  showModal(`<h2>게임 폴더: ${esc(FS.name)}</h2>
+    <p>지금 에디터가 불러오고 저장하는 폴더예요. 컴퓨터의 탐색기(Finder)에서 ‘${esc(FS.name)}’ 폴더를 찾으면 같은 내용이 들어 있어요.</p>
+    <ul class="tree">${lines.join('') || '<li>비어 있는 폴더예요.</li>'}</ul>
+    <p style="font-size:12px">브라우저 보안 때문에 컴퓨터 안의 전체 경로를 보여 주거나 탐색기 창을 직접 열 수는 없어요.</p>
+    <div class="mrow"><button class="btn primary" id="m-ok">확인</button></div>`);
+  $('#m-ok').onclick = closeModal; $('#m-ok').focus();
+};
+
+/* ======================= 파일 고르기 (저장할 때 복사) ======================= */
+let pickTarget = null;
+function beginPick(target){
+  pickTarget = target;
+  const inp = $('#pickFile');
+  inp.accept = target.kind === 'bgm' || target.kind === 'sfx' ? 'audio/*,.ogg,.mp3,.wav,.m4a' : target.kind === 'font' ? '.ttf,.otf,.woff,.woff2' : 'image/png,image/jpeg,image/webp,image/gif';
+  inp.click();
+}
+async function toPng(file){
+  const dims = await imageDims(file);
+  if (!dims) throw new Error('이미지 파일을 읽을 수 없어요.');
+  if (file.type === 'image/png') return {blob:file, dims};
+  const bm = await createImageBitmap(file), cv = document.createElement('canvas');
+  cv.width = bm.width; cv.height = bm.height; cv.getContext('2d').drawImage(bm, 0, 0); bm.close?.();
+  return {blob:await new Promise(r => cv.toBlob(r, 'image/png')), dims};
+}
+const ANIM_EXT = ['.png', '.gif', '.webp'];
+async function toImage(file){ // 배경·캐릭터: GIF·WebP는 원본 그대로(움직임 유지), PNG(APNG 포함)도 그대로, 나머지는 PNG로
+  const t = (file.type || '').toLowerCase(), n = (file.name || '').toLowerCase();
+  const keep = t === 'image/gif' || n.endsWith('.gif') ? '.gif' : t === 'image/webp' || n.endsWith('.webp') ? '.webp' : null;
+  if (keep){ const dims = await imageDims(file); if (!dims) throw new Error('이미지 파일을 읽을 수 없어요.'); return {blob:file, dims, ext:keep}; }
+  return Object.assign(await toPng(file), {ext:'.png'});
+}
+const extTag = path => { const m = /\.(gif|webp)$/i.exec(path || ''); return m ? ' · ' + m[1].toUpperCase() : ''; };
+async function makeThumb(blob){ // 화면 크기 투명화에서 그림이 있는 부분만 찾아 얼굴 쪽을 정사각형으로
+  const bm = await createImageBitmap(blob);
+  const sw = 160, sh = Math.max(1, Math.round(160 * bm.height / bm.width));
+  const sc = document.createElement('canvas'); sc.width = sw; sc.height = sh;
+  const sx = sc.getContext('2d', {willReadFrequently:true}); sx.drawImage(bm, 0, 0, sw, sh);
+  const px = sx.getImageData(0, 0, sw, sh).data; let x0 = sw, y0 = sh, x1 = -1, y1 = -1;
+  for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) if (px[(y * sw + x) * 4 + 3] > 16){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  const k = bm.width / sw;
+  let bx = 0, by = 0, bw = bm.width, bh = bm.height;
+  if (x1 >= 0){ bx = x0 * k; by = y0 * k; bw = (x1 - x0 + 1) * k; bh = (y1 - y0 + 1) * k; }
+  const side = Math.min(bw, bh), cx = bx + bw / 2;
+  const s = 128, cv = document.createElement('canvas'); cv.width = cv.height = s;
+  cv.getContext('2d').drawImage(bm, Math.max(0, cx - side / 2), by, side, side, 0, 0, s, s); bm.close?.();
+  return cv.toDataURL('image/png');
+}
+function sizeNote(d, want){ // 게임은 정해진 칸에 비율을 유지해 맞추므로 크기보다 비율이 중요
+  if (!d || !want) return '';
+  if (want.max) return d.w > want.w || d.h > want.h ? `최대 ${want.w}×${want.h}보다 커요` : '';
+  if (Math.abs(d.w / d.h - want.w / want.h) > 0.01 * (want.w / want.h)) return `비율이 ${want.w}:${want.h}과 달라요. 게임에서 ${want.fit === 'cover' ? '잘려요' : want.fit === 'fill' ? '늘어나요' : '배경보다 작게 떠요'}`;
+  if (d.w < want.w) return `${want.w}×${want.h}보다 작아서 흐리게 보일 수 있어요`;
+  return '';
+}
+$('#pickFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; const t = pickTarget; pickTarget = null;
+  if (!f || !t) return;
+  try {
+    let note = '';
+    if (t.kind === 'char'){
+      const c = chr(t.id); if (!c) return;
+      const {blob, dims, ext} = await toImage(f);
+      c.ext = Object.assign({}, c.ext); if (ext === IMG_EXT) delete c.ext[t.code]; else c.ext[t.code] = ext;
+      setRes(KEY.char(c, t.code), blob, null, dims);
+      if (ext !== IMG_EXT) note += `움직이는 ${ext.slice(1).toUpperCase()}라 원본 그대로 복제해요. `;
+      const th = await makeThumb(blob); RES.get(KEY.char(c, t.code)).thumb = th;
+      if (t.code === 'default'){ c.img = th; THUMBS.set(c.id, c.img); }
+      note = (sizeNote(dims, CHAR_SIZE) && `${dims.w}×${dims.h}: ${sizeNote(dims, CHAR_SIZE)}. `) + note;
+    } else if (t.kind === 'bg'){
+      const b = P.backgrounds.find(x => x.id === t.id); if (!b) return;
+      const {blob, dims, ext} = await toImage(f);
+      if (ext === IMG_EXT) delete b.ext; else b.ext = ext;
+      setRes(KEY.bg(b), blob, null, dims);
+      note = (sizeNote(dims, BG_SIZE) && `${dims.w}×${dims.h}: ${sizeNote(dims, BG_SIZE)}. `) + (ext !== IMG_EXT ? `움직이는 ${ext.slice(1).toUpperCase()}라 원본 그대로 복제해요. ` : '');
+    } else if (t.kind === 'end'){
+      const d = P.endings.find(x => x.id === t.id); if (!d) return;
+      const {blob, dims, ext} = await toImage(f);
+      if (ext === IMG_EXT) delete d.ext; else d.ext = ext;
+      setRes(KEY.end(d), blob, null, dims);
+      note = (sizeNote(dims, BG_SIZE) && `${dims.w}×${dims.h}: ${sizeNote(dims, BG_SIZE)}. `) + (ext !== IMG_EXT ? `움직이는 ${ext.slice(1).toUpperCase()}라 원본 그대로 복제해요. ` : '');
+    } else if (t.kind === 'font'){
+      try { const ff = new FontFace('VNFontCheck', await f.arrayBuffer()); await ff.load(); }
+      catch { throw new Error('글꼴 파일을 읽을 수 없어요. .ttf, .otf, .woff, .woff2 파일을 골라 주세요.'); }
+      setRes(KEY.font(t.name), f, null, null);
+    } else if (t.kind === 'ui'){
+      const u = UI_ITEMS.find(x => x.name === t.name), {blob, dims} = await toPng(f); setRes(KEY.ui(t.name), blob, null, dims);
+      note = sizeNote(dims, u) && `${dims.w}×${dims.h}: ${sizeNote(dims, u)}. `;
+    } else {
+      const s = P.sound[t.kind].find(x => x.id === t.id); if (!s) return;
+      const ext = (extOf(f.name) || DEF_EXT[t.kind]).toLowerCase();
+      if (!AUDIO_EXT.includes(ext)) toast('게임에서 재생되지 않을 수 있는 형식이에요. ogg·mp3·wav를 추천해요.');
+      s.file = sndBase(s) + ext; setRes(KEY.snd(t.kind, s), f, null, null);
+    }
+    toast(`${note}골라 뒀어요. ‘저장’을 누르면 게임 폴더에 복사돼요.`);
+  } catch (err){ infoModal('파일을 고를 수 없어요', `<p>${esc(err?.message || String(err))}</p>`); }
+  refresh({side:true});
+});
+
+/* ======================= 이름 바꾸기 (한글/English) — 파일은 저장할 때 반영 ======================= */
+function startRename(btn, value, commit){
+  const inp = document.createElement('input');
+  inp.className = 'nmedit'; inp.value = value; inp.spellcheck = false;
+  btn.replaceWith(inp); inp.focus(); inp.select();
+  let done = false;
+  const finish = ok => { if (done) return; done = true; inp.dataset.done = '1'; if (ok && inp.value.trim() !== value) commit(inp.value); else refresh({side:true}); };
+  inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') finish(true); if (e.key === 'Escape') finish(false); });
+  inp.addEventListener('blur', () => finish(true));
+}
+function checkEn(en, used, what){
+  if (!en){ toast(`‘한글/${what}’ 형식으로 적어 주세요. 영문 이름이 비어 있어요.`); return false; }
+  if (!RE_EN.test(en)){ toast('영문 이름에는 영문·숫자·_·-만 쓸 수 있어요.'); return false; }
+  if (used.some(u => u.toLowerCase() === en.toLowerCase())){ toast(`영문 이름 ‘${en}’은(는) 이미 쓰고 있어요. (대소문자만 다른 이름도 안 돼요)`); return false; }
+  return true;
+}
+function renameChar(c, v){
+  const {ko, en} = splitLabel(v), oldEn = charEng(c), newEn = en ?? oldEn;
+  if (!ko){ toast('한글 이름이 비어 있어요.'); refresh({side:true}); return; }
+  if (charLen(ko) > NAME_MAX){ toast(`이름은 ${NAME_MAX}자까지 쓸 수 있어요. (지금 ${charLen(ko)}자)`); refresh({side:true}); return; }
+  if (newEn !== oldEn && !checkEn(newEn, P.characters.filter(x => x !== c).map(charEng), 'CharacterName')){ refresh({side:true}); return; }
+  const oldDir = charDir(c);
+  c.name = ko; c.path = 'Characters/' + newEn;
+  if (newEn !== oldEn){ markDirty(charKeys(c)); if (SAVED_DIRS.has(oldDir.toLowerCase())) DELDIRS.set(oldDir, {recursive:true}); } // 옛 폴더는 새 이름으로 복제한 뒤 폴더째 지움
+  refresh({side:true, insp:true});
+}
+function renameBg(b, v){
+  const {ko, en} = splitLabel(v), newEn = en ?? b.file, oldKey = b.key;
+  if (newEn !== b.file && !checkEn(newEn, P.backgrounds.filter(x => x !== b).map(x => x.file), 'BackgroundName')){ refresh({side:true}); return; }
+  b.desc = ko; b.file = newEn; b.key = 'bg_' + newEn; markDirty([KEY.bg(b)]);
+  if (b.key !== oldKey) P.blocks.forEach(x => { if (x.bg === oldKey) x.bg = b.key; });
+  refresh({side:true, insp:true});
+}
+function renameSnd(kind, s, v){
+  const {ko, en} = splitLabel(v), oldBase = sndBase(s), newBase = en ?? oldBase, oldKey = s.key;
+  if (newBase !== oldBase && !checkEn(newBase, P.sound[kind].filter(x => x !== s).map(sndBase), 'SoundName')){ refresh({side:true}); return; }
+  s.desc = ko; s.file = newBase + (extOf(s.file) || DEF_EXT[kind]);
+  s.key = newBase.startsWith(kind + '_') ? newBase : kind + '_' + newBase; markDirty([KEY.snd(kind, s)]);
+  if (s.key !== oldKey){ P.blocks.forEach(x => { if (x[kind] === oldKey) x[kind] = s.key; }); if (kind === 'bgm' && P.sound.mainBgm === oldKey) P.sound.mainBgm = s.key; if (kind === 'bgm' && P.sound.titleBgm === oldKey) P.sound.titleBgm = s.key; }
+  refresh({side:true, insp:true});
+}
+const PEND = '<span class="pend" title="저장하면 게임 폴더에 이 이름으로 복사돼요">저장 전</span>';
+
+/* ======================= 캐릭터 탭 ======================= */
+function guideCss(){ // UI 탭의 대사창 위치·크기 → 표정 칸의 점선 (1280×720 대비 %)
+  const d = P.layout.dialogBox;
+  return `left:${d.x / 12.8}%;top:${d.y / 7.2}%;width:${d.w / 12.8}%;height:${d.h / 7.2}%;right:auto;bottom:auto`;
+}
+function renderCharsTab(){
+  const box = $('#charSets'); if (editingIn('#charSets')) return;
+  if (!P.characters.length){ box.innerHTML = '<p class="empty-big">아직 캐릭터가 없어요. 오른쪽 위 ‘캐릭터 추가’를 누르세요.</p>'; return; }
+  box.innerHTML = P.characters.map(c => {
+    const en = charEng(c);
+    const head = `<div class="chead">
+        <button class="nmlabel" data-act="rename" title="눌러서 이름 고치기">${labelHtml(c.name, en)}</button>
+        <label class="plr" title="선택지 블럭에 표시되는 플레이어"><input type="radio" name="player" data-act="player"${c.player ? ' checked' : ''}>플레이어</label>
+        <span class="pathtxt">${esc(charDir(c))}/</span><span class="spacer"></span>
+        <button class="x" data-act="del" title="캐릭터 삭제">×</button></div>`;
+    if (isNarr(c)) return `<div class="cset" data-c="${c.id}">${head}<div class="narr">내레이터는 게임 화면에 이름표와 그림이 나오지 않아요. 이미지를 넣지 않아도 돼요.</div></div>`;
+    const slots = EXPRS.map(x => {
+      const key = KEY.char(c, x.code), e = resOf(key), p = charImg(c, x.code), n = sizeNote(e?.dims, CHAR_SIZE);
+      return `<div class="slot" data-act="pick" data-code="${x.code}" title="${esc(p)}">
+        <span class="slab">${x.emoji} ${x.name}</span><span class="guide" style="${guideCss()}" title="게임에서 대사창이 덮는 자리 (UI 탭의 대사창 위치·크기)"><span>대사창 자리</span></span>
+        ${e?.url ? `<img alt="${esc(c.name)} ${x.name}" src="${e.url}">` : `<span class="ph"${e ? ` data-hk="${key}"` : ''}>${PERSON}</span>`}
+        ${pendingOf(key, p) ? `<span class="pend-at">${PEND}</span>` : ''}
+        ${e?.dims ? `<span class="sz${n ? ' bad' : ''}" title="${esc(n)}">${e.dims.w}×${e.dims.h}${extTag(p)}</span>` : ''}
+        <button class="btn small pick" data-act="pick" data-code="${x.code}">선택</button></div>`; }).join('');
+    return `<div class="cset" data-c="${c.id}">${head}<div class="slots">${slots}</div></div>`;
+  }).join('');
+  observeHydrate(box);
+}
+$('#charSets').addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const c = chr(t.closest('.cset')?.dataset.c); if (!c) return;
+  const act = t.dataset.act;
+  if (act === 'rename') startRename(t, `${c.name}/${charEng(c)}`, v => renameChar(c, v));
+  if (act === 'player'){ P.characters.forEach(x => x.player = x === c); refresh({side:true}); }
+  if (act === 'pick'){ e.stopPropagation(); beginPick({kind:'char', id:c.id, code:t.dataset.code}); }
+  if (act === 'del'){
+    const used = P.blocks.some(b => b.charId === c.id);
+    confirmModal(`${c.name}을(를) 삭제할까요?`, `<p>${used ? '이 캐릭터가 쓰인 블럭은 캐릭터가 비게 돼요. ' : ''}저장하면 게임 폴더의 ${esc(charDir(c))} 폴더도 지워져요.</p>`, '삭제').then(ok => {
+      if (!ok) return;
+      journalDelete(charKeys(c)); if (SAVED_DIRS.has(charDir(c).toLowerCase())) DELDIRS.set(charDir(c), {recursive:true});
+      P.characters = P.characters.filter(x => x !== c); P.blocks.forEach(b => { if (b.charId === c.id) b.charId = null; });
+      if (c.player && P.characters[0]) P.characters[0].player = true;
+      refresh({side:true, insp:true});
+    });
+  }
+});
+$('#addChar').onclick = () => {
+  const name = nextName('캐릭터', P.characters.map(c => c.name)), en = nextName('Character', P.characters.map(charEng));
+  P.characters.push({id:uid(), name, path:'Characters/' + en, img:'', player:!P.characters.length});
+  refresh({side:true, insp:true});
+  requestAnimationFrame(() => { const v = $('#v-chars'); v.scrollTop = v.scrollHeight; });
+};
+
+/* ======================= 배경 탭 ======================= */
+function renderBgTab(){
+  const box = $('#bgGrid'); if (editingIn('#bgGrid')) return;
+  if (!P.backgrounds.length){ box.innerHTML = '<p class="empty-big" style="grid-column:1/-1">아직 배경이 없어요. 오른쪽 위 ‘배경 추가’를 누르세요.</p>'; return; }
+  box.innerHTML = P.backgrounds.map(b => {
+    const key = KEY.bg(b), e = resOf(key), p = bgFile(b), n = sizeNote(e?.dims, BG_SIZE), used = P.blocks.filter(x => x.bg === b.key).length;
+    return `<div class="bgcard" data-id="${b.id}">
+      <div class="bghead"><button class="x" data-act="del" title="배경 삭제">×</button><span class="spacer"></span>
+        <button class="nmlabel" data-act="rename" title="눌러서 이름 고치기">${labelHtml(b.desc, b.file)}</button></div>
+      <button class="bgimg" data-act="pick" title="${esc(p)}">${e?.url ? `<img alt="${esc(b.desc)}" src="${e.url}">` : e ? `<span class="ph" data-hk="${key}"><b>16 : 9</b>불러오는 중</span>` : `<span class="ph"><b>16 : 9</b>눌러서 이미지 고르기</span>`}</button>
+      <div class="bgfoot"><span class="pathtxt">${esc(b.key)} · 대사 ${used}곳</span><span class="spacer"></span>
+        ${pendingOf(key, p) ? PEND : ''}${e?.dims ? `<span class="pathtxt${n ? ' miss' : ''}" title="${esc(n)}">${e.dims.w}×${e.dims.h}${extTag(p)}</span>` : e ? '' : '<span class="miss">파일 없음</span>'}</div></div>`;
+  }).join('');
+  observeHydrate(box);
+}
+$('#bgGrid').addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const b = P.backgrounds.find(x => x.id === t.closest('.bgcard').dataset.id); if (!b) return;
+  if (t.dataset.act === 'rename') startRename(t, `${b.desc}/${b.file}`, v => renameBg(b, v));
+  if (t.dataset.act === 'pick') beginPick({kind:'bg', id:b.id});
+  if (t.dataset.act === 'del'){
+    const used = P.blocks.filter(x => x.bg === b.key).length;
+    confirmModal(`배경 ‘${b.desc || b.key}’을(를) 삭제할까요?`, `<p>${used ? `이 배경을 쓰는 블럭 ${used}개는 ‘바꾸지 않음’이 돼요. ` : ''}저장하면 게임 폴더의 ${esc(bgFile(b))}도 지워져요.</p>`, '삭제').then(ok => {
+      if (!ok) return;
+      journalDelete([KEY.bg(b)]); P.backgrounds = P.backgrounds.filter(x => x !== b); P.blocks.forEach(x => { if (x.bg === b.key) x.bg = ''; }); refresh({side:true, insp:true});
+    });
+  }
+});
+$('#addBg').onclick = () => {
+  const en = nextName('background', P.backgrounds.map(b => b.file));
+  P.backgrounds.push({id:uid(), key:'bg_' + en, file:en, desc:nextName('배경', P.backgrounds.map(b => b.desc))});
+  refresh({side:true, insp:true});
+  requestAnimationFrame(() => { const v = $('#v-bg'); v.scrollTop = v.scrollHeight; });
+};
+
+/* ======================= 엔딩 탭 ======================= */
+function renderEndTab(){
+  const box = $('#endGrid'); if (editingIn('#endGrid')) return;
+  if (!P.endings.length){ box.innerHTML = '<p class="empty-big" style="grid-column:1/-1">아직 엔딩이 없어요. 오른쪽 위 ‘엔딩 추가’를 누르세요.</p>'; return; }
+  box.innerHTML = P.endings.map(d => {
+    const key = KEY.end(d), e = resOf(key), p = endFile(d), n = sizeNote(e?.dims, BG_SIZE), used = P.blocks.filter(x => x.type === 'end' && x.endKey === d.key).length;
+    return `<div class="bgcard" data-id="${d.id}">
+      <div class="bghead"><button class="x" data-act="del" title="엔딩 삭제">×</button><span class="spacer"></span>
+        <button class="nmlabel" data-act="rename" title="눌러서 이름 고치기">${labelHtml(d.desc, d.file)}</button></div>
+      <button class="bgimg" data-act="pick" title="${esc(p)}">${e?.url ? `<img alt="${esc(d.desc)}" src="${e.url}">` : e ? `<span class="ph" data-hk="${key}"><b>16 : 9</b>불러오는 중</span>` : `<span class="ph"><b>컷씬</b>눌러서 이미지 고르기 (없어도 돼요)</span>`}</button>
+      <div class="bgfoot"><span class="pathtxt">${esc(d.key)} · 엔딩 블럭 ${used}곳</span><span class="spacer"></span>
+        ${pendingOf(key, p) ? PEND : ''}${e?.dims ? `<span class="pathtxt${n ? ' miss' : ''}" title="${esc(n)}">${e.dims.w}×${e.dims.h}${extTag(p)}</span>` : ''}
+        ${e ? '<button class="btn small" data-act="unpick" title="컷씬 빼기">컷씬 빼기</button>' : ''}</div></div>`;
+  }).join('');
+  observeHydrate(box);
+}
+function renameEnding(d, v){
+  const {ko, en} = splitLabel(v); let newEn = (en ?? d.file).toUpperCase(), oldKey = d.key;
+  if (newEn !== d.file){
+    if (!newEn || !RE_END_EN.test(newEn)){ toast('엔딩 영문 이름은 영문 대문자·숫자·_만 쓸 수 있어요. (소문자는 대문자로 바꿔요)'); refresh({side:true}); return; }
+    if (P.endings.some(x => x !== d && x.file === newEn)){ toast(`영문 이름 ‘${newEn}’은(는) 이미 쓰고 있어요.`); refresh({side:true}); return; }
+  }
+  d.file = newEn; d.key = 'ENDING_' + newEn; d.desc = ko;
+  if (d.key !== oldKey) markDirty([KEY.end(d)]);
+  P.blocks.forEach(x => { if (x.type === 'end' && x.endKey === oldKey){ x.endKey = d.key; x.text = ko; } });
+  refresh({side:true, insp:true});
+}
+$('#endGrid').addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const d = P.endings.find(x => x.id === t.closest('.bgcard').dataset.id); if (!d) return;
+  if (t.dataset.act === 'rename') startRename(t, `${d.desc}/${d.file}`, v => renameEnding(d, v));
+  if (t.dataset.act === 'pick') beginPick({kind:'end', id:d.id});
+  if (t.dataset.act === 'unpick'){ journalDelete([KEY.end(d)]); dropRes(k => k === KEY.end(d)); delete d.ext; refresh({side:true}); toast(`컷씬을 뺐어요. 저장하면 게임 폴더의 ${endFile(d)}이(가) 지워져요.`); }
+  if (t.dataset.act === 'del'){
+    const used = P.blocks.filter(x => x.type === 'end' && x.endKey === d.key).length;
+    confirmModal(`엔딩 ‘${d.desc || d.key}’을(를) 삭제할까요?`, `<p>${used ? `이 엔딩을 쓰는 엔딩 블럭 ${used}개는 엔딩을 다시 골라야 해요. ` : ''}저장하면 게임 폴더의 컷씬 파일도 지워져요.</p>`, '삭제').then(ok => {
+      if (!ok) return;
+      journalDelete([KEY.end(d)]); P.endings = P.endings.filter(x => x !== d);
+      P.blocks.forEach(x => { if (x.type === 'end' && x.endKey === d.key) x.endKey = ''; });
+      refresh({side:true, insp:true});
+    });
+  }
+});
+$('#addEnding').onclick = () => {
+  const en = nextName('ENDING', P.endings.map(d => d.file));
+  P.endings.push({id:uid(), key:'ENDING_' + en, file:en, desc:'[엔딩] ' + nextName('새 엔딩 ', P.endings.map(d => d.desc.replace(/^\[엔딩\] /, '')))});
+  refresh({side:true, insp:true});
+  requestAnimationFrame(() => { const v = $('#v-ending'); v.scrollTop = v.scrollHeight; });
+};
+
+/* ======================= 사운드 탭 ======================= */
+const NOTE = '<svg viewBox="0 0 24 24"><path d="M9 4.5v10.1a3.2 3.2 0 1 0 2 3V8.4l8-1.8v6a3.2 3.2 0 1 0 2 3V2.6z"/></svg>';
+const player0 = new Audio(); let playingKey = null;
+player0.addEventListener('ended', () => { playingKey = null; renderSoundTab(); });
+function stopSound(){ if (playingKey){ player0.pause(); playingKey = null; renderSoundTab(); } }
+function renderSoundTab(){
+  if (editingIn('#v-sound')) return;
+  const tb = P.sound.titleBgm || '', main = P.sound.bgm.find(x => x.key === P.sound.mainBgm);
+  const o = (v, t) => `<option value="${esc(v)}"${v === tb ? ' selected' : ''}>${esc(t)}</option>`;
+  $('#titleBgmRow').innerHTML = `<label class="titlebgm" title="게임을 켜면 메인 화면(새 게임·불러오기·설정)에서 나오는 BGM">메인 화면 BGM
+    <select class="in" id="title-bgm">${o('', `★ 메인 BGM과 같게${main ? ` (${main.desc || main.key})` : ''}`)}${o('none', '없음 (소리 없음)')}${P.sound.bgm.map(s => o(s.key, s.desc ? `${s.desc} (${s.key})` : s.key)).join('')}</select></label>`;
+  for (const kind of ['bgm', 'sfx']){
+    const list = P.sound[kind];
+    $('#' + kind + 'Grid').innerHTML = list.length ? list.map(s => {
+      const key = KEY.snd(kind, s), e = resOf(key), p = sndPath(kind, s);
+      const used = P.blocks.filter(x => x[kind] === s.key).length + (kind === 'bgm' && P.sound.mainBgm === s.key ? P.blocks.filter(x => x.bgm === 'MAIN').length : 0);
+      return `<div class="snd${e ? ' has' : ''}" data-kind="${kind}" data-id="${s.id}">
+        <button class="nmlabel" data-act="rename" title="눌러서 이름 고치기">${labelHtml(s.desc, sndBase(s))}</button>
+        <button class="disc" data-act="pick" title="눌러서 소리 파일 고르기 (${esc(p)})">${NOTE}</button>
+        <span class="st${e ? '' : ' miss'}">${e ? esc(s.file) : '파일 없음'}</span>
+        <div class="row">
+          <button class="mini${playingKey === key ? ' on' : ''}" data-act="play" title="${playingKey === key ? '멈춤' : '미리 듣기'}"${e ? '' : ' disabled'}>${playingKey === key ? '■' : '▶'}</button>
+          ${kind === 'bgm' ? `<button class="mini${P.sound.mainBgm === s.key ? ' on' : ''}" data-act="main" title="메인 BGM으로 지정 (대사의 MAIN)">${P.sound.mainBgm === s.key ? '★' : '☆'}</button>` : ''}
+          ${pendingOf(key, p) ? PEND : ''}<span class="spacer"></span><span class="st" title="이 사운드를 쓰는 대사 수">${used}곳</span>
+          <button class="mini" data-act="del" title="삭제">×</button></div></div>`;
+    }).join('') : `<p class="empty" style="grid-column:1/-1">아직 ${kind.toUpperCase()}가 없어요. ‘${kind.toUpperCase()} 추가’를 누르세요.</p>`;
+  }
+}
+$('#v-sound').addEventListener('change', e => { if (e.target.id === 'title-bgm'){ P.sound.titleBgm = e.target.value; refresh({side:true}); } });
+$('#v-sound').addEventListener('click', e => {
+  const add = e.target.closest('[data-add]');
+  if (add){
+    const k = add.dataset.add, base = nextName(k + '_sound', P.sound[k].map(sndBase));
+    P.sound[k].push({id:uid(), key:base, file:base + DEF_EXT[k], desc:nextName(k === 'bgm' ? '배경음' : '효과음', P.sound[k].map(s => s.desc))});
+    if (k === 'bgm' && !P.sound.mainBgm) P.sound.mainBgm = base;
+    refresh({side:true, insp:true}); return;
+  }
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const card = t.closest('.snd'), kind = card.dataset.kind, s = P.sound[kind].find(x => x.id === card.dataset.id); if (!s) return;
+  const act = t.dataset.act, key = KEY.snd(kind, s);
+  if (act === 'rename') startRename(t, `${s.desc}/${sndBase(s)}`, v => renameSnd(kind, s, v));
+  if (act === 'pick') beginPick({kind, id:s.id});
+  if (act === 'play'){
+    if (playingKey === key){ stopSound(); return; }
+    hydrate(key).then(en => { if (!en?.url) return; player0.src = en.url; player0.currentTime = 0; player0.play().catch(() => toast('이 파일은 브라우저에서 재생할 수 없어요.')); playingKey = key; renderSoundTab(); });
+  }
+  if (act === 'main'){ P.sound.mainBgm = s.key; refresh({side:true}); }
+  if (act === 'del'){
+    const used = P.blocks.filter(x => x[kind] === s.key).length;
+    confirmModal(`‘${s.desc || s.key}’을(를) 삭제할까요?`, `<p>${used ? `이 사운드를 쓰는 블럭 ${used}개는 비워져요. ` : ''}저장하면 게임 폴더의 ${esc(sndPath(kind, s))}도 지워져요.</p>`, '삭제').then(ok => {
+      if (!ok) return;
+      if (playingKey === key) stopSound();
+      journalDelete([key]); P.sound[kind] = P.sound[kind].filter(x => x !== s); P.blocks.forEach(x => { if (x[kind] === s.key) x[kind] = ''; });
+      if (kind === 'bgm' && P.sound.mainBgm === s.key) P.sound.mainBgm = P.sound.bgm[0]?.key || '';
+      if (kind === 'bgm' && P.sound.titleBgm === s.key) P.sound.titleBgm = '';
+      refresh({side:true, insp:true});
+    });
+  }
+});
+
+/* ======================= UI 탭 ======================= */
+/* ======================= UI 탭: 미리보기(보기만) + 오른쪽 창에서 위치·크기·리소스·글꼴·글자 조정 ======================= */
+// 화면 요소 (게임과 같은 1280×720 좌표). imgs: 이 요소에 쓰는 UI 이미지
+const LAYOUT_EL = {
+  dialogBox:     {label:'대사창', stage:'game', imgs:['DialogBox']},
+  dialogText:    {label:'대사 글자 영역', stage:'game', text:'dialog', note:'대사가 타이핑되는 자리예요.'},
+  nameBox:       {label:'이름표', stage:'game', imgs:['NameBox'], text:'name', note:'너비는 가장 작은 너비예요. 이름이 길면 늘어나요.'},
+  choice:        {label:'선택지', stage:'game', imgs:['ChoiceButton', 'ChoiceButtonSelected'], text:'choice', note:'맨 아래 선택지의 자리예요. 다른 선택지는 위로 10px 간격으로 쌓여요.'},
+  settingButton: {label:'설정 버튼', stage:'game', imgs:['SettingButton']},
+  titleBg:       {label:'메인 화면 배경', stage:'title', imgs:['TitleBackground'], fixed:true},
+  titleLogo:     {label:'메인 화면 로고', stage:'title', imgs:['TitleLogo'], text:'title', note:'로고 이미지가 없으면 게임 제목 글자가 이 자리에 나와요.'},
+  titleMenu:     {label:'메인 메뉴', stage:'title', text:'menu', moveOnly:true, note:'새 게임·불러오기·설정 메뉴의 위치예요.'},
+  endingTitle:   {label:'엔딩 제목', stage:'ending', text:'ending', note:'엔딩 종류·제목·모은 엔딩 수가 이 상자 가운데에 나와요. 컷씬은 엔딩 탭에서 정해요.'},
+  endingButton:  {label:'엔딩 확인 버튼', stage:'ending', imgs:['EndingButton'], text:'endButton', note:'‘메인 화면으로’ 버튼이에요.'}
+};
+const GEO_RANGE = {x:[0, 1280], y:[0, 720], w:[8, 1280], h:[8, 720]};
+const GEO_LABEL = {x:'X', y:'Y', w:'너비', h:'높이'};
+const TEXT_STYLES = [
+  {k:'dialog', label:'대사'}, {k:'name', label:'이름표'}, {k:'choice', label:'선택지'},
+  {k:'title', label:'메인 화면 제목'}, {k:'menu', label:'메인 메뉴'}, {k:'ending', label:'엔딩 제목'}, {k:'endButton', label:'엔딩 버튼'}];
+const RE_HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+let uiSel = null;                                        // 열어 둔 화면 요소
+const uiWinOpen = {els:true, fonts:true, text:true};     // 접었다 펼 수 있는 창
+
+const uiUrl = n => resOf(KEY.ui(n))?.url;
+function skinStyle(n){ // 이미지가 있으면 그 이미지, 없으면 기본 디자인
+  const u = uiUrl(n);
+  if (!u) return {cls:'', css:'', hk:RES.has(KEY.ui(n)) ? ` data-hk="${KEY.ui(n)}"` : ''};
+  return {cls:' u-skin', css:n === 'NameBox' ? `--nb-img:url('${u}');` : `background-image:url('${u}');`, hk:''};
+}
+const rectCss = r => `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;`;
+const colorCss = (c, fallback) => `color:${c || fallback};`;
+function renderStages(){
+  const L = P.layout, F = L.fonts;
+  const pl = player(), sample = P.blocks.find(b => b.type === 'line' && classify(kids(b.id)).ch.length);
+  const chs = sample ? classify(kids(sample.id)).ch.slice(0, 2) : [];
+  const q = sample ? sample.text : '(무엇을 할까?)';
+  const c1 = chs[0]?.text || '첫 번째 선택지', c2 = chs[1]?.text || '두 번째 선택지';
+  const sp = sample ? chr(sample.charId) : pl;
+  const db = L.dialogBox, dt = L.dialogText, nb = L.nameBox, ch = L.choice, sb = L.settingButton, lg = L.titleLogo, tm = L.titleMenu;
+  const dlh = Math.round(F.dialog.size * 1.375), clh = Math.round(F.choice.size * 1.125), cpad = Math.max(0, Math.floor((ch.h - clh) / 2));
+  const sk = n => skinStyle(n);
+  const dS = sk('DialogBox'), nS = sk('NameBox'), cS = sk('ChoiceButton'), csS = uiUrl('ChoiceButtonSelected') ? sk('ChoiceButtonSelected') : cS, sS = sk('SettingButton');
+  $('#stage-game .layer').innerHTML = `<div class="gbg"><span>배경 (배경 탭에서 관리)</span></div><div class="gch"></div>
+    <div class="uel u-dialog${dS.cls}"${dS.hk} style="${rectCss(db)}${dS.css}"></div>
+    <div class="uel u-dtext" style="${rectCss(dt)}font-size:${F.dialog.size}px;line-height:${dlh}px;${colorCss(F.dialog.color, '#E8EAED')}">${esc(q)}</div>
+    <div class="uel u-name${nS.cls}"${nS.hk} style="left:${nb.x}px;top:${nb.y}px;min-width:${nb.w}px;height:${nb.h}px;font-size:${F.name.size}px;${colorCss(F.name.color, nS.cls ? '#E8EAED' : '#1C1E21')}${nS.css}"><i class="nb nb-m"></i><i class="nb nb-l"></i><i class="nb nb-r"></i><span class="nbt">${esc(sp?.name || '주인공')}</span></div>
+    <div class="u-choices" style="left:${ch.x}px;bottom:${720 - (ch.y + ch.h)}px;width:${ch.w}px">
+      <div class="uel u-choice sel${csS.cls}" style="min-height:${ch.h}px;padding:${cpad}px 28px;font-size:${F.choice.size}px;line-height:${clh}px;${colorCss(F.choice.color, csS.cls ? '#E8EAED' : '#1C1E21')}${csS.css}">${esc(c1)}</div>
+      <div class="uel u-choice${cS.cls}"${cS.hk} style="min-height:${ch.h}px;padding:${cpad}px 28px;font-size:${F.choice.size}px;line-height:${clh}px;${colorCss(F.choice.color, '#E8EAED')}${cS.css}">${esc(c2)}</div></div>
+    <div class="uel u-set${sS.cls}"${sS.hk} style="${rectCss(sb)}${sS.css}"><i></i><i></i><i></i></div>`;
+  const tS = sk('TitleBackground'), lS = sk('TitleLogo');
+  $('#stage-title .layer').innerHTML = `<div class="uel u-tbg${tS.cls}"${tS.hk} style="${tS.css}"></div>
+    <div class="uel u-logo${lS.cls}${lS.cls ? '' : ' empty'}"${lS.hk} style="${rectCss(lg)}font-size:${F.title.size}px;${colorCss(F.title.color, '#fff')}${lS.css}">${lS.cls ? '' : esc(P.title || '게임 제목')}</div>
+    <div class="uel u-menu" data-menu style="left:${tm.x}px;top:${tm.y}px;font-size:${F.menu.size}px;${colorCss(F.menu.color, '#8C9198')}"><span class="on">새 게임</span><span>불러오기</span><span>설정</span></div>`;
+  // 엔딩 화면: 컷씬이 있는 첫 엔딩(없으면 첫 엔딩)으로 미리보기
+  const ed = P.endings.find(d => RES.has(KEY.end(d))) || P.endings[0], ee = ed && resOf(KEY.end(ed));
+  if (ee && !ee.url) hydrate(KEY.end(ed));
+  const em = /^\[(.+?)\]\s*(.*)$/.exec(ed?.desc || ''), et = L.endingTitle, eb = L.endingButton, ebS = sk('EndingButton');
+  $('#stage-ending .layer').innerHTML = `<div class="uel u-ecut" style="${ee?.url ? `background-image:url('${ee.url}');` : ''}">${ee?.url ? '' : '<span>컷씬 (엔딩 탭에서 관리)</span>'}</div>
+    <div class="uel u-etitle" style="${rectCss(et)}${colorCss(F.ending.color, '#fff')}"><small>${esc(em ? em[1] : '엔딩')}</small><b style="font-size:${F.ending.size}px">${esc(em ? em[2] : (ed?.desc || '엔딩 제목'))}</b><small>모은 엔딩 1 / ${Math.max(1, P.endings.length)}</small></div>
+    <div class="uel u-ebtn${ebS.cls}"${ebS.hk} style="${rectCss(eb)}font-size:${F.endButton.size}px;${colorCss(F.endButton.color, ebS.cls ? '#E8EAED' : '#1C1E21')}${ebS.css}">메인 화면으로</div>`;
+  observeHydrate($('#v-ui'));
+  drawSel();
+}
+// 오른쪽에서 고른 요소를 미리보기에 표시 (조작은 오른쪽 창에서만)
+function selRect(k){
+  if (k === 'titleBg') return {x:0, y:0, w:1280, h:720};
+  if (k === 'titleMenu'){ const el = $('#stage-title [data-menu]'); return {x:P.layout.titleMenu.x, y:P.layout.titleMenu.y, w:el?.offsetWidth || 280, h:el?.offsetHeight || 149}; }
+  return P.layout[k];
+}
+function drawSel(){
+  ['game', 'title', 'ending'].forEach(st => {
+    const box = $(`#stage-${st} .selbox`), def = uiSel && LAYOUT_EL[uiSel];
+    if (!def || def.stage !== st){ box.style.display = 'none'; return; }
+    const r = selRect(uiSel);
+    Object.assign(box.style, {display:'block', left:r.x + 'px', top:r.y + 'px', width:r.w + 'px', height:r.h + 'px'});
+    box.querySelector('.tag').textContent = `${def.label}  ${r.x}, ${r.y}${def.moveOnly || def.fixed ? '' : `  ·  ${r.w} × ${r.h}`}`;
+  });
+}
+
+// 미리보기에 게임 글꼴 적용 (고른 파일이나 게임 폴더의 Fonts)
+const previewFaces = new Map(); // 글꼴 이름 → {url, face}
+let hangulRatioCache = null;
+async function applyPreviewFonts(){
+  let changed = false;
+  for (const f of FONT_ITEMS){
+    const key = KEY.font(f.name), e = RES.get(key), cur = previewFaces.get(f.name);
+    if (!e){ if (cur){ document.fonts.delete(cur.face); previewFaces.delete(f.name); changed = true; } continue; }
+    if (!e.url){ hydrate(key); continue; }
+    if (cur?.url === e.url) continue;
+    if (cur) document.fonts.delete(cur.face);
+    try { const face = new FontFace('VNPreviewFont', `url("${e.url}")`, {weight:f.weight}); await face.load(); document.fonts.add(face); previewFaces.set(f.name, {url:e.url, face}); }
+    catch { previewFaces.delete(f.name); }
+    changed = true;
+  }
+  const on = previewFaces.size > 0;
+  ['#stage-game', '#stage-title'].forEach(sel => $(sel).style.fontFamily = on ? '"VNPreviewFont", var(--font)' : '');
+  if (changed){ hangulRatioCache = null; scheduleCheck(); }
+}
+// 대사창 글자 수: 글자 영역 크기와 글자 크기로 계산 (한글 한 글자 너비 × 줄 수, 단어 단위 줄바꿈 여유 13%)
+function hangulRatio(){
+  if (hangulRatioCache) return hangulRatioCache;
+  let r = 0.7305; // 기본 글꼴 PF스타더스트의 한글 너비 (글자 크기 대비)
+  if (previewFaces.has('Regular')){
+    const ctx = document.createElement('canvas').getContext('2d'); ctx.font = '100px "VNPreviewFont"';
+    const w = ctx.measureText('가나다라마바사아자차').width / 10; if (w > 20) r = w / 100;
+  }
+  return (hangulRatioCache = r);
+}
+function dialogMax(){
+  const L = P.layout, size = L.fonts.dialog.size, lh = Math.round(size * 1.375);
+  const per = Math.max(1, Math.floor(L.dialogText.w / (size * hangulRatio()))), lines = Math.max(1, Math.floor(L.dialogText.h / lh));
+  return Math.max(10, Math.floor(per * lines * 0.87));
+}
+
+// 오른쪽 창
+function imgStatus(n, tag){
+  const u = UI_ITEMS.find(x => x.name === n), key = KEY.ui(n), p = uiPath(n), e = resOf(key), note = sizeNote(e?.dims, u);
+  return {u, key, p, e, html:`<span class="st${e ? ' on' : ''}">${tag ? u.label + ': ' : ''}${e ? `적용됨${e.dims ? ' ' + e.dims.w + '×' + e.dims.h : ''}${note ? ' · ' + note : ''}` : '기본 디자인'}</span>${pendingOf(key, p) ? ' ' + PEND : ''}`};
+}
+function elCard(k){
+  const def = LAYOUT_EL[k], open = uiSel === k, r = open ? selRect(k) : null;
+  const imgs = def.imgs || [];
+  const sub = imgs.length ? imgs.map(n => imgStatus(n, imgs.length > 1).html).join(' ') : `<span class="st">${def.text ? '글자 자리' : ''}</span>`;
+  let body = '';
+  if (open){
+    body += '<div class="ebody">';
+    if (!def.fixed){
+      const keys = def.moveOnly ? ['x', 'y'] : ['x', 'y', 'w', 'h'];
+      body += keys.map(g => { const [mn, mx] = GEO_RANGE[g]; const lab = g === 'w' && k === 'nameBox' ? '최소 너비' : GEO_LABEL[g];
+        return `<label class="sl"><span>${lab}</span><input type="range" min="${mn}" max="${mx}" step="1" data-geo="${g}" value="${r[g]}"><input class="in num" type="number" data-geo-n="${g}" value="${r[g]}"></label>`; }).join('');
+    }
+    if (def.note) body += `<p class="unote">${def.note}</p>`;
+    if (k === 'dialogText') body += `<p class="unote">지금 크기로 한 블럭에 <b>${dialogMax()}자</b>까지 들어가요.</p>`;
+    body += '<div class="btnrow">';
+    imgs.forEach(n => { const st = imgStatus(n);
+      body += `<button class="btn small primary" data-act="pick-res" data-img="${n}">리소스 선택${imgs.length > 1 ? ` (${st.u.label})` : ''}</button>`;
+      if (st.e) body += `<button class="btn small" data-act="reset-res" data-img="${n}" title="이미지를 빼고 기본 디자인으로">기본 디자인${imgs.length > 1 ? ` (${st.u.label})` : ''}</button>`; });
+    if (!def.fixed) body += `<button class="btn small" data-act="geo-reset">기본 위치로</button>`;
+    body += '</div>';
+    if (imgs.length) body += `<p class="unote">${imgs.map(n => { const st = imgStatus(n); return `${st.p} · ${st.u.max ? '최대 ' : ''}${st.u.w}×${st.u.h}`; }).join('<br>')}</p>`;
+    body += '</div>';
+  }
+  return `<div class="ecard${open ? ' open' : ''}" data-el="${k}">
+    <button class="ehead" data-act="toggle-el"><span class="et"><b>${def.label}</b>${sub}</span><span class="chev">${open ? '▴' : '▾'}</span></button>${body}</div>`;
+}
+function renderUiPanel(){
+  const L = P.layout, def = uiSel && LAYOUT_EL[uiSel];
+  let h = `<div class="uicard titlecard"><div class="uisub first">게임 제목 <small>메인 화면과 브라우저 탭에 보여요</small></div>
+    <div class="uiform"><input class="in" id="ui-title" maxlength="60" placeholder="게임 제목" value="${esc(P.title || '')}"></div></div>
+    <hr class="usep">`;
+  h += `<details class="uiwin" data-win="els"${uiWinOpen.els ? ' open' : ''}><summary>화면 요소 <small>눌러서 위치·크기·리소스 조정</small></summary>
+    <div class="wbody">${Object.keys(LAYOUT_EL).map(elCard).join('')}</div></details>`;
+  h += `<details class="uiwin" data-win="fonts"${uiWinOpen.fonts ? ' open' : ''}><summary>글꼴 <small>없으면 게임은 Noto Sans KR</small></summary><div class="wbody">` + FONT_ITEMS.map(f => {
+    const key = KEY.font(f.name), p = fontPath(f.name), e = resOf(key);
+    return `<div class="uirow" data-font="${f.name}"><b>${f.label}</b>
+      <div class="btns"><button class="btn small" data-act="pick">선택</button>${e ? '<button class="btn small" data-act="reset" title="글꼴을 빼고 기본 글꼴(Noto Sans KR)로">기본으로</button>' : ''}</div>
+      <span class="meta">${p} · ${f.use}</span>
+      <span class="st${e ? ' on' : ''}">${e ? '적용됨' : '기본 글꼴 (Noto Sans KR)'} ${pendingOf(key, p) ? PEND : ''}</span></div>`;
+  }).join('') + `</div></details>`;
+  h += `<details class="uiwin" data-win="text"${uiWinOpen.text ? ' open' : ''}><summary>글자 크기·색 <small>색을 비우면 기본 색</small></summary><div class="wbody">` + TEXT_STYLES.map(t => {
+    const f = L.fonts[t.k], hot = def?.text === t.k ? ' hot' : '';
+    return `<div class="tsrow${hot}" data-ts="${t.k}"><b>${t.label}</b>
+      <label class="nf sm"><input class="in" type="number" min="8" max="300" data-ts-size value="${f.size}"><span>px</span></label>
+      <input type="color" data-ts-pick value="${RE_HEX.test(f.color) && f.color.length === 7 ? f.color : '#e8eaed'}" title="색 고르기">
+      <input class="in hex" data-ts-color placeholder="자동" maxlength="7" value="${esc(f.color || '')}"></div>`;
+  }).join('') + `<p class="unote pad">대사 글자 크기와 글자 영역에 맞춰 한 블럭 최대 글자 수가 정해져요. 지금: <b>${dialogMax()}자</b></p>
+    <div class="btnrow pad"><button class="btn small" data-act="layout-reset">배치·글자 모두 기본값으로</button></div></div></details>`;
+  $('#uiList').innerHTML = h;
+}
+function renderUiTab(){
+  if (editingIn('#v-ui')) return;
+  renderStages(); renderUiPanel();
+  applyPreviewFonts();
+  fitStages();
+}
+function fitStages(){ ['game', 'title', 'ending'].forEach(k => { const w = $('#sw-' + k).clientWidth; if (w) $('#stage-' + k).style.transform = `scale(${w / 1280})`; }); }
+new ResizeObserver(() => { if (curTab === 'ui') fitStages(); }).observe($('#sw-game'));
+// 오른쪽 창 입력
+function setGeo(g, v){ // 슬라이더·숫자 칸 → 배치
+  const o = P.layout[uiSel]; if (!o || !Number.isFinite(v)) return;
+  o[g] = (g === 'w' || g === 'h') ? Math.max(8, Math.round(v)) : Math.round(v);
+  const card = $(`#uiList .ecard[data-el="${uiSel}"]`);
+  card?.querySelectorAll(`[data-geo="${g}"], [data-geo-n="${g}"]`).forEach(inp => { if (document.activeElement !== inp) inp.value = o[g]; });
+  renderStages();
+}
+$('#uiList').addEventListener('toggle', e => { const w = e.target.closest?.('[data-win]'); if (w) uiWinOpen[w.dataset.win] = w.open; }, true);
+$('#uiList').addEventListener('input', e => {
+  const t = e.target;
+  if (t.id === 'ui-title'){ P.title = t.value; $('#title').value = t.value; renderStages(); scheduleCheck(); return; }
+  if (t.matches('[data-geo]')){ setGeo(t.dataset.geo, +t.value); return; }
+  if (t.matches('[data-ts-pick]')){ const row = t.closest('[data-ts]'); row.querySelector('[data-ts-color]').value = t.value; P.layout.fonts[row.dataset.ts].color = t.value; renderStages(); }
+});
+$('#uiList').addEventListener('change', e => {
+  const t = e.target;
+  if (t.matches('[data-geo]')){ refresh({side:true}); return; }                       // 슬라이더를 놓으면 기록
+  if (t.matches('[data-geo-n]')){ setGeo(t.dataset.geoN, +t.value); refresh({side:true}); return; }
+  const row = t.closest('[data-ts]'); if (!row){ if (t.id === 'ui-title') refresh(); return; }
+  const f = P.layout.fonts[row.dataset.ts];
+  if (t.matches('[data-ts-size]')){ const v = Math.round(+t.value); if (Number.isFinite(v)) f.size = Math.min(300, Math.max(8, v)); refresh({side:true}); }
+  if (t.matches('[data-ts-color]')){
+    let v = t.value.trim(); if (v && v[0] !== '#') v = '#' + v;
+    if (v && !RE_HEX.test(v)){ toast('색은 #FFFFFF처럼 # 다음에 6자리(또는 3자리)로 적어 주세요.'); t.value = f.color || ''; return; }
+    f.color = v.toLowerCase(); refresh({side:true});
+  }
+  if (t.matches('[data-ts-pick]')) refresh({side:true});
+});
+$('#uiList').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' && e.target.matches('input:not([type=range])')) e.target.blur(); });
+$('#uiList').addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const act = t.dataset.act;
+  if (act === 'toggle-el'){ const k = t.closest('.ecard').dataset.el; uiSel = uiSel === k ? null : k; renderUiPanel(); drawSel(); return; }
+  if (act === 'pick-res'){ beginPick({kind:'ui', name:t.dataset.img}); return; }
+  if (act === 'reset-res'){ const n = t.dataset.img; journalDelete([KEY.ui(n)]); dropRes(k => k === KEY.ui(n)); refresh({side:true}); toast(`기본 디자인으로 바꿨어요. 저장하면 게임 폴더의 ${uiPath(n)}이(가) 지워져요.`); return; }
+  if (act === 'geo-reset'){ Object.assign(P.layout[uiSel], JSON.parse(JSON.stringify(DEFAULT_LAYOUT[uiSel]))); refresh({side:true}); return; }
+  if (act === 'layout-reset'){
+    confirmModal('배치와 글자 설정을 기본값으로 되돌릴까요?', '<p>모든 화면 요소의 위치·크기와 글자 크기·색이 처음 상태로 돌아가요. 이미지와 게임 제목은 그대로예요.</p>', '되돌리기').then(ok => {
+      if (!ok) return; P.layout = mergeLayout(null); refresh({side:true}); });
+    return;
+  }
+  const row = t.closest('.uirow'); if (!row?.dataset.font) return;
+  const fn = row.dataset.font;
+  if (act === 'pick') beginPick({kind:'font', name:fn});
+  if (act === 'reset'){ journalDelete([KEY.font(fn)]); dropRes(k => k === KEY.font(fn)); refresh({side:true}); toast(`기본 글꼴로 바꿨어요. 저장하면 게임 폴더의 ${fontPath(fn)}이(가) 지워져요.`); }
+});
+
+function renderResourceTabs(){ renderCharsTab(); renderBgTab(); renderEndTab(); renderSoundTab(); renderUiTab(); }
+
+/* ======================= 에디터 정보 파일 (한글 이름·블럭 배치) ======================= */
+let EDATA = null;                         // 폴더의 editor-data.json 내용
+const SYNC = {csvHash:null, snap:{}, layout:null}; // layout: 폴더의 UI/Layout.json 내용 (없으면 null)     // 마지막으로 폴더와 맞춘 상태 (바뀐 것만 저장하려고)
+async function readEditorData(){
+  const f = await readFile(EDITOR_DATA); if (!f) return null;
+  try { return JSON.parse(await f.text()); } catch { return null; }
+}
+function namesOf(scope){
+  if (scope === 'chars') return {chars:Object.fromEntries(P.characters.map(c => [charEng(c), {name:c.name, player:!!c.player}]))};
+  if (scope === 'bg') return {bgs:Object.fromEntries(P.backgrounds.map(b => [b.file, b.desc || '']))};
+  if (scope === 'ending') return {endings:Object.fromEntries(P.endings.map(d => [d.file, d.desc || '']))};
+  if (scope === 'sound') return {bgm:Object.fromEntries(P.sound.bgm.map(s => [sndBase(s), s.desc || ''])), sfx:Object.fromEntries(P.sound.sfx.map(s => [sndBase(s), s.desc || ''])), mainBgm:P.sound.mainBgm};
+  return null;
+}
+function dialogSnap(){
+  return JSON.stringify({title:P.title, startId:P.startId, edges:P.edges,
+    blocks:P.blocks.map(b => { const o = Object.assign({}, b, {charEn:charEng(chr(b.charId) || {})}); delete o.charId; return o; })});
+}
+function markSynced(scope){ // 지금 상태를 ‘폴더와 같음’으로 기록
+  if (scope === 'dialog'){ SYNC.snap.dialog = dialogSnap(); return; }
+  SYNC.snap[scope] = JSON.stringify(namesOf(scope));
+}
+
+/* ======================= 불러오기 (폴더 → 에디터) ======================= */
+const ROOTS = {chars:['Characters'], ui:['UI'], bg:['Backgrounds'], sound:['Sounds/BGM', 'Sounds/SFX'], ending:['Endings'], dialog:['Dialog']};
+async function listChildren(path){
+  const out = []; let d; try { d = await getDir(path, false); } catch { return out; }
+  for await (const [n, h] of d.entries()) out.push([n, h]);
+  return out.sort((a, b) => a[0].localeCompare(b[0]));
+}
+async function loadChars(data, warns, csvNames, full){
+  const names = Object.assign({}, csvNames || {}, data?.names?.chars || {}), old = P.characters, byEn = new Map(old.map(c => [charEng(c).toLowerCase(), c]));
+  const codes = new Set(EXPRS.map(x => x.code));
+  const dirs = await pool(await listChildren('Characters'), 8, async ([en, h]) => {
+    if (h.kind !== 'directory') return {en, file:true};
+    const files = []; for await (const [fn, fh] of h.entries()) files.push([fn, fh]);
+    return {en, files};
+  });
+  dropRes(k => k.startsWith('char:')); SAVED_DIRS.clear();
+  const next = [];
+  for (const d of dirs){
+    if (d.file){ warns.push(`Characters/${d.en}: 캐릭터 폴더 밖의 파일이라 건너뛰었어요.`); continue; }
+    const en = d.en; if (!RE_EN.test(en)) warns.push(`Characters/${en}: 폴더 이름에 영문·숫자·_·- 말고 다른 글자가 있어요.`);
+    const ex = byEn.get(en.toLowerCase());
+    const c = ex ? Object.assign({}, ex, {path:'Characters/' + en}) : {id:uid(), name:names[en]?.name || en, path:'Characters/' + en, img:'', player:!!names[en]?.player};
+    SAVED_DIRS.add(('Characters/' + en).toLowerCase());
+    c.ext = {};
+    const found = new Map(); // 표정 코드 → [파일 이름, 핸들] (.png 우선)
+    for (const [fn, fh] of d.files){
+      const m = /^(.+?)(\.png|\.gif|\.webp)$/i.exec(fn), code = m && m[1], ext = m && m[2].toLowerCase();
+      if (fh.kind !== 'file' || !m || !codes.has(code) || m[2] !== ext){ warns.push(`Characters/${en}/${fn}: 편집기의 표정 6종(${EXPRS.map(x => x.code).join(', ')}, .png·.gif·.webp)이 아니라 건너뛰었어요. 폴더에는 그대로 남아요.`); continue; }
+      const prev = found.get(code);
+      if (prev){ const keepNew = ANIM_EXT.indexOf(ext) < ANIM_EXT.indexOf(prev[2]); warns.push(`Characters/${en}/${code}: 같은 표정이 여러 형식으로 있어서 ${keepNew ? ext : prev[2]} 파일을 써요. 게임도 .png → .gif → .webp 순으로 하나만 써요.`); if (!keepNew) continue; }
+      found.set(code, [fn, fh, ext]);
+    }
+    for (const [code, [fn, fh, ext]] of found){ if (ext !== IMG_EXT) c.ext[code] = ext; setResHandle(KEY.char(c, code), fh, `Characters/${en}/${fn}`); }
+    next.push(c);
+  }
+  // 내레이터는 그림이 필요 없어서 폴더가 없어도 남겨 둠
+  old.filter(c => isNarr(c) && !next.some(n => charEng(n).toLowerCase() === charEng(c).toLowerCase())).forEach(c => next.push(c));
+  const order = c => { const i = old.findIndex(o => o.id === c.id); return i < 0 ? 1e6 : i; };
+  next.sort((a, b) => order(a) - order(b));
+  if (!next.some(c => c.player)){ const pc = next.find(c => c.name === '주인공') || next.find(c => !isNarr(c)); if (pc) pc.player = true; }
+  const ids = new Set(next.map(c => c.id)); let lost = 0;
+  P.blocks.forEach(b => { if (b.charId && !ids.has(b.charId)){ b.charId = null; lost++; } });
+  if (lost && !full) warns.push(`폴더에 없는 캐릭터가 빠져서 블럭 ${lost}개의 캐릭터가 비었어요.`);
+  P.characters = next;
+}
+async function loadBgs(data, warns){
+  const names = data?.names?.bgs || {}, byFile = new Map(P.backgrounds.map(b => [b.file.toLowerCase(), b])), next = [];
+  const list = await listChildren('Backgrounds');
+  dropRes(k => k.startsWith('bg:'));
+  const found = new Map();
+  for (const [fn, h] of list){
+    const m = /^(.+?)(\.png|\.gif|\.webp)$/.exec(fn);
+    if (h.kind !== 'file' || !m){ warns.push(`Backgrounds/${fn}: .png·.gif·.webp 이미지가 아니라 건너뛰었어요. 폴더에는 그대로 남아요.`); continue; }
+    const prev = found.get(m[1]);
+    if (prev){ const keepNew = ANIM_EXT.indexOf(m[2]) < ANIM_EXT.indexOf(prev[2]); warns.push(`Backgrounds/${m[1]}: 같은 배경이 여러 형식으로 있어서 ${keepNew ? m[2] : prev[2]} 파일을 써요.`); if (!keepNew) continue; }
+    found.set(m[1], [fn, h, m[2]]);
+  }
+  for (const [base, [fn, h, ext]] of found){
+    const ex = byFile.get(base.toLowerCase());
+    const b = ex ? Object.assign({}, ex, {file:base, key:'bg_' + base}) : {id:uid(), key:'bg_' + base, file:base, desc:names[base] || base};
+    if (ext !== IMG_EXT) b.ext = ext; else delete b.ext;
+    if (ex && ex.key !== b.key) P.blocks.forEach(x => { if (x.bg === ex.key) x.bg = b.key; });
+    setResHandle(KEY.bg(b), h, `Backgrounds/${fn}`);
+    next.push(b);
+  }
+  P.backgrounds = next;
+}
+async function loadSounds(data, warns){
+  const lists = await Promise.all(['bgm', 'sfx'].map(k => listChildren(sndFolder(k))));
+  dropRes(k => k.startsWith('bgm:') || k.startsWith('sfx:'));
+  ['bgm', 'sfx'].forEach((kind, ki) => {
+    const names = data?.names?.[kind] || {}, byBase = new Map(P.sound[kind].map(s => [sndBase(s).toLowerCase(), s])), next = [];
+    for (const [fn, h] of lists[ki]){
+      const ext = (extOf(fn) || '').toLowerCase();
+      if (h.kind !== 'file' || !AUDIO_EXT.includes(ext)){ warns.push(`${sndFolder(kind)}${fn}: 소리 파일이 아니라 건너뛰었어요. 폴더에는 그대로 남아요.`); continue; }
+      const base = fn.slice(0, -ext.length), ex = byBase.get(base.toLowerCase());
+      const key = base.startsWith(kind + '_') ? base : kind + '_' + base;
+      const s = ex ? Object.assign({}, ex, {file:fn}) : {id:uid(), key, file:fn, desc:names[base] || base};
+      setResHandle(KEY.snd(kind, s), h, sndFolder(kind) + fn);
+      next.push(s);
+    }
+    P.sound[kind] = next;
+  });
+  const keys = P.sound.bgm.map(s => s.key);
+  if (!keys.includes(P.sound.mainBgm)) P.sound.mainBgm = keys.includes(data?.names?.mainBgm) ? data.names.mainBgm : keys[0] || '';
+}
+const LAYOUT_FILE = 'UI/Layout.json';
+function layoutJson(){ // 게임이 읽는 배치 파일 내용
+  const tb = P.sound.titleBgm, tbs = tb && tb !== 'none' ? P.sound.bgm.find(x => x.key === tb) : null;
+  return JSON.stringify(Object.assign({about:'에디터 UI 탭에서 만든 화면 배치와 글자 설정이에요. 게임(index.html)이 읽어요. 좌표는 1280×720 화면 기준이에요.', version:1, gameTitle:P.title || '',
+    titleBgm:tb === 'none' ? 'none' : tbs ? sndPath('bgm', tbs) : ''},
+    JSON.parse(JSON.stringify(P.layout))), null, 1);
+}
+async function readLayoutFile(){ const f = await readFile(LAYOUT_FILE); if (!f) return null; try { return JSON.parse(await f.text()); } catch { return null; } }
+let LAYOUT_TITLE = false; // 이번 불러오기에서 Layout.json의 제목을 썼는지
+let LAYOUT_RAW = null;
+async function loadEndings(warns, data){ // Endings 폴더의 컷씬 → 엔딩 목록 (파일 이름 = ENDING_ 뒤 영문)
+  // 대사에 아직 안 쓴 엔딩도 editor-data.json에 이름이 있으면 되살림
+  for (const [file, desc] of Object.entries(data?.names?.endings || {})){
+    if (RE_END_EN.test(file) && !P.endings.some(x => x.file === file)) P.endings.push({id:uid(), key:'ENDING_' + file, file, desc});
+  }
+  const list = await listChildren('Endings');
+  dropRes(k => k.startsWith('end:'));
+  P.endings.forEach(d => delete d.ext);
+  const found = new Map();
+  for (const [fn, h] of list){
+    const m = /^(.+?)(\.png|\.gif|\.webp)$/i.exec(fn);
+    if (h.kind !== 'file' || !m){ warns.push(`Endings/${fn}: .png·.gif·.webp 이미지가 아니라 건너뛰었어요. 폴더에는 그대로 남아요.`); continue; }
+    const base = m[1], ext = m[2].toLowerCase(), up = base.toUpperCase();
+    const prev = found.get(up); if (prev && ANIM_EXT.indexOf(ext) >= ANIM_EXT.indexOf(prev[2])){ warns.push(`Endings/${base}: 같은 엔딩 컷씬이 여러 형식으로 있어서 ${prev[2]} 파일을 써요.`); continue; }
+    found.set(up, [fn, h, ext, base]);
+  }
+  for (const [up, [fn, h, ext, base]] of found){
+    if (!RE_END_EN.test(up)){ warns.push(`Endings/${fn}: 파일 이름은 영문 대문자·숫자·_로 지어야 해요.`); continue; }
+    if (base !== up) warns.push(`Endings/${fn}: 게임은 대문자 이름(${up}${ext})으로 찾아요. 저장하면 대문자 이름으로 바꿔 넣어요.`);
+    let d = P.endings.find(x => x.file === up);
+    if (!d){ d = {id:uid(), key:'ENDING_' + up, file:up, desc:up}; P.endings.push(d); }
+    if (ext !== IMG_EXT) d.ext = ext;
+    setResHandle(KEY.end(d), h, `Endings/${fn}`);
+  }
+}
+async function loadUi(){
+  const lj = await readLayoutFile();
+  P.layout = mergeLayout(lj);
+  if (lj && typeof lj.gameTitle === 'string' && lj.gameTitle.trim()){ P.title = lj.gameTitle.trim(); LAYOUT_TITLE = true; $('#title').value = P.title; }
+  LAYOUT_RAW = lj; // 메인 화면 BGM은 사운드 목록을 불러온 뒤에 맞춤 (runLoad)
+  const [list, fonts] = await Promise.all([listChildren('UI'), listChildren('Fonts')]).then(r => r.map(l => new Map(l)));
+  dropRes(k => k.startsWith('ui:') || k.startsWith('font:'));
+  for (const u of UI_ITEMS){ const h = list.get(u.name + IMG_EXT); if (h && h.kind === 'file') setResHandle(KEY.ui(u.name), h, uiPath(u.name)); }
+  for (const f of FONT_ITEMS){ const h = fonts.get(f.name + '.ttf'); if (h && h.kind === 'file') setResHandle(KEY.font(f.name), h, fontPath(f.name)); }
+}
+function decodeCsv(buf){
+  try { return new TextDecoder('utf-8', {fatal:true}).decode(buf); } catch { return new TextDecoder('euc-kr').decode(buf); }
+}
+async function readCsvRows(){
+  const f = await readFile('Dialog/Dialog.csv'); if (!f) return null;
+  const text = decodeCsv(await f.arrayBuffer()).replace(/^\uFEFF/, '');
+  const all = parseCSV(text); if (!all.length) return {text, rows:[]};
+  const keys = all[0].map(k => k.trim()); checkKeys(keys);
+  return {text, rows:all.slice(1).map(r => Object.fromEntries(keys.map((k, j) => [k, (r[j] ?? '').trim()]))).filter(o => o.id && o.id !== 'ID')};
+}
+function csvSpeakerNames(rows){ // 영문 폴더 이름 → 대사에 쓰인 한글 이름
+  const m = {}; (rows || []).forEach(r => { const en = (r.portrait || '').split('/').filter(Boolean).pop(); if (en && r.speaker && !m[en]) m[en] = {name:r.speaker}; }); return m;
+}
+async function loadDialog(data, warns, full){
+  const csv = await readCsvRows();
+  let proj;
+  if (!csv){ warns.push('Dialog/Dialog.csv가 없어서 대사가 비었어요.'); SYNC.csvHash = null; proj = {title:P.title, startId:null, blocks:[], edges:[]}; }
+  else {
+    const text = csv.text, saved = data?.dialog;
+    SYNC.csvHash = hashText(text);
+    if (full && !data?.names?.mainBgm){ // 메인 BGM은 대사의 MAIN 줄 경로에서 찾음
+      const m = csv.rows.find(r => r.bgm === 'MAIN' && r.bgm_path), fn = m && m.bgm_path.split('/').pop().toLowerCase();
+      const hit = fn && P.sound.bgm.find(x => x.file.toLowerCase() === fn); if (hit) P.sound.mainBgm = hit.key;
+    }
+    if (saved && saved.csvHash === hashText(text)){ // 에디터가 저장한 그대로면 블럭 배치까지 복원
+      const byEn = new Map(P.characters.map(c => [charEng(c).toLowerCase(), c.id])); let lost = 0;
+      proj = {title:saved.title, startId:saved.startId, edges:saved.edges || [],
+        blocks:(saved.blocks || []).map(b => { const o = Object.assign({}, b); o.charId = b.charEn ? byEn.get(b.charEn.toLowerCase()) || null : null; if (b.charEn && !o.charId) lost++; delete o.charEn; return o; })};
+      if (lost) warns.push(`캐릭터 탭에 없는 캐릭터가 쓰인 블럭 ${lost}개는 캐릭터가 비었어요.`);
+    } else {
+      const rows = csv.rows; if (!rows.length) throw new Error('Dialog/Dialog.csv에 대사가 없어요.');
+      // 이름이 달라도 같은 폴더(portrait)를 쓰면 같은 캐릭터, 키가 달라도 같은 파일(경로)이면 같은 사운드로 맞춤
+      const fileOf = p => (p || '').split('/').pop();
+      rows.forEach(r => {
+        if (r.speaker && !P.characters.some(c => c.name === r.speaker)){
+          const en = (r.portrait || '').split('/').filter(Boolean).pop(); const c = en && P.characters.find(x => charEng(x).toLowerCase() === en.toLowerCase());
+          if (c) r.speaker = c.name;
+        }
+        for (const k of ['bgm', 'sfx']){
+          if (!r[k] || ['MAIN', 'STOP'].includes(r[k]) || P.sound[k].some(x => x.key === r[k])) continue;
+          const hit = P.sound[k].find(x => x.file.toLowerCase() === fileOf(r[k + '_path']).toLowerCase()); if (hit) r[k] = hit.key;
+        }
+      });
+      const before = new Set(P.characters.map(c => c.id));
+      const res = rowsToProject(rows, {characters:P.characters.map(c => Object.assign({}, c)), sound:P.sound, bgFolder:P.bgFolder, backgrounds:P.backgrounds});
+      warns.push(...res.warnings);
+      if (saved) warns.push('Dialog.csv가 에디터 밖에서 바뀌어서 블럭 배치를 새로 정리했어요.');
+      const added = res.project.characters.filter(c => !before.has(c.id));
+      if (added.length){
+        if (full){ P.characters.push(...added); warns.push(`대사에만 있던 캐릭터 ${added.map(c => c.name).join(', ')}을(를) 캐릭터 탭에 추가했어요.`); }
+        else { const ids = new Set(added.map(c => c.id)); res.project.blocks.forEach(b => { if (ids.has(b.charId)) b.charId = null; });
+          warns.push(`캐릭터 탭에 없는 ${added.map(c => c.name).join(', ')}의 대사는 캐릭터가 비었어요. ‘모든 폴더 내용 불러오기’로 함께 불러오면 추가돼요.`); }
+      }
+      proj = res.project;
+    }
+  }
+  if (!LAYOUT_TITLE) P.title = proj.title || P.title; // 게임 제목은 UI/Layout.json이 우선
+  P.startId = proj.startId;
+  P.blocks = (proj.blocks || []).map(b => Object.assign({}, BLOCK_DEFAULT, b));
+  P.endings = deriveEndings(P.blocks, P.endings || []);
+  P.edges = (proj.edges || []).filter(e => e.from && e.to).map(e => Object.assign({id:uid()}, e));
+  sel.blocks = new Set(); sel.edge = null; if (linkFrom) endLink();
+  for (const [, el] of els) el.remove(); els.clear();
+  $('#title').value = P.title || '';
+  needFit = true;
+}
+function clearJournal(scope){
+  for (const k of [...DIRTY]) if (scopeOfKey(k) === scope) DIRTY.delete(k);
+  for (const [p, v] of [...DEL]) if (v.scope === scope) DEL.delete(p);
+  if (scope === 'chars') DELDIRS.clear();
+}
+async function runLoad(all){
+  const scopes = all ? ALL_SCOPES : [curTab], warns = [];
+  try {
+    const data = await readEditorData(); EDATA = data;
+    LAYOUT_TITLE = false;
+    if (!scopes.includes('ui') && scopes.includes('dialog')){ const lj = await readLayoutFile(); if (lj?.gameTitle) LAYOUT_TITLE = true; }
+    let csvNames = null;
+    if (all){ try { csvNames = csvSpeakerNames((await readCsvRows())?.rows); } catch {} }
+    await Promise.all([ // 서로 다른 폴더라 동시에 읽음
+      scopes.includes('chars') && loadChars(data, warns, csvNames, all),
+      scopes.includes('bg') && loadBgs(data, warns),
+      scopes.includes('sound') && loadSounds(data, warns),
+      scopes.includes('ui') && loadUi()]);
+    if (scopes.includes('ui')){ // Layout.json의 메인 화면 BGM 경로 → 사운드 목록의 키
+      const t = LAYOUT_RAW?.titleBgm || '';
+      if (t === 'none') P.sound.titleBgm = 'none';
+      else if (t){ const f = t.split('/').pop().toLowerCase(), hit = P.sound.bgm.find(x => x.file.toLowerCase() === f); P.sound.titleBgm = hit ? hit.key : ''; if (!hit) warns.push(`메인 화면 BGM(${t})을 BGM 목록에서 찾지 못해서 ‘메인 BGM과 같게’로 바꿨어요.`); }
+      else P.sound.titleBgm = '';
+      SYNC.layout = LAYOUT_RAW ? layoutJson() : null;
+    }
+    if (scopes.includes('dialog')) await loadDialog(data, warns, all); // 캐릭터·사운드 이름으로 대사를 맞추므로 마지막에
+    if (scopes.includes('ending')) await loadEndings(warns, data);              // 엔딩 목록은 대사의 엔딩 블럭에서 나오므로 그 뒤에
+    scopes.forEach(sc => { clearJournal(sc); markSynced(sc); });
+  } catch (err){
+    infoModal('불러오지 못했어요', `<p>${esc(err?.message || String(err))}</p><p style="font-size:12.5px">일부만 바뀌었을 수 있어요. 화면을 확인해 주세요.</p>`);
+  }
+  hist.restoring = true; refresh({insp:true, side:true}); hist.restoring = false; resetHistory();
+  if (curTab === 'dialog' && needFit){ needFit = false; requestAnimationFrame(() => { P.blocks.forEach(updateBlock); drawEdges(); fitView(); }); }
+  const what = all ? '모든 폴더' : TAB_SCOPE[curTab];
+  if (warns.length) infoModal(`${what}를 불러왔어요. 확인할 점이 ${warns.length}개 있어요`, `<ul>${warns.map(w => `<li>${esc(w)}</li>`).join('')}</ul>`);
+  else toast(`${what}를 불러왔어요.`);
+}
+
+/* ======================= 저장: 변경 기록에 있는 것만 =======================
+   폴더를 훑어 비교하지 않음. 저장 전 칸만 복제하고, 기록된 옛 파일만 지움 → 바뀐 개수만큼만 일함 */
+function planSave(scopes){
+  const writes = [], dels = new Map(), dirsMake = [], dirsDrop = [], noFile = [];
+  for (const k of [...DIRTY]){
+    if (!scopes.includes(scopeOfKey(k))) continue;
+    const target = aliveTarget(k), e = RES.get(k);
+    if (!target || !e){ DIRTY.delete(k); continue; }       // 지운 항목
+    if (e.path === target){ DIRTY.delete(k); continue; }   // 이름을 원래대로 되돌린 경우
+    writes.push({key:k, path:target, old:e.path});
+  }
+  const wl = new Set(writes.map(w => w.path.toLowerCase()));
+  let dup = ''; if (wl.size !== writes.length){ const seen = new Set(); writes.forEach(w => { const l = w.path.toLowerCase(); if (seen.has(l)) dup = w.path; seen.add(l); }); }
+  // 이름이 바뀐 칸의 옛 파일 (새 파일과 같은 경로면 지우지 않음: 대소문자만 바뀐 경우 포함)
+  writes.forEach(w => { if (w.old && !wl.has(w.old.toLowerCase())) dels.set(w.old, {scope:scopeOfKey(w.key), key:w.key}); });
+  for (const [p, v] of DEL){
+    if (!scopes.includes(v.scope) || wl.has(p.toLowerCase())) continue;
+    const e = v.key && RES.get(v.key); if (e && e.path === p && aliveTarget(v.key) === p) continue; // 되돌리기로 다시 살아난 항목
+    dels.set(p, v);
+  }
+  if (scopes.includes('chars')){
+    P.characters.forEach(c => { if (!SAVED_DIRS.has(charDir(c).toLowerCase())) dirsMake.push(charDir(c)); });
+    for (const [d, o] of DELDIRS) if (!P.characters.some(c => charDir(c).toLowerCase() === d.toLowerCase())) dirsDrop.push({dir:d, recursive:o.recursive});
+  }
+  if (scopes.includes('bg')) P.backgrounds.forEach(b => { if (!RES.has(KEY.bg(b))) noFile.push(b.desc || b.key); });
+  if (scopes.includes('sound')) ['bgm', 'sfx'].forEach(k => P.sound[k].forEach(s => { if (!RES.has(KEY.snd(k, s))) noFile.push(s.desc || s.key); }));
+  const plan = {scopes, writes, dels, dirsMake, dirsDrop, noFile, dup, names:[], csv:null, layout:false};
+  ['chars', 'bg', 'sound', 'ending'].forEach(sc => { if (scopes.includes(sc) && SYNC.snap[sc] !== JSON.stringify(namesOf(sc))) plan.names.push(sc); });
+  if (scopes.includes('dialog')){
+    const text = toCSV(linearize()), h = hashText(text.replace(/^\uFEFF/, ''));
+    if (h !== SYNC.csvHash) plan.csv = {text, hash:h};
+    plan.layout = dialogSnap() !== SYNC.snap.dialog;
+  }
+  if (scopes.includes('ui') || scopes.includes('dialog') || scopes.includes('sound')){ const lj = layoutJson(); if (lj !== SYNC.layout) plan.layoutFile = lj; }
+  plan.count = writes.length + dels.size + dirsMake.length + dirsDrop.length + (plan.csv ? 1 : 0) + (plan.layoutFile ? 1 : 0);
+  plan.empty = !plan.count && !plan.names.length && !plan.layout;
+  return plan;
+}
+async function readSource(e){
+  try { const f = e.blob || await e.handle.getFile(); return new Blob([await f.arrayBuffer()], {type:f.type}); }
+  catch { const f = e.path && await readFile(e.path); if (f) return new Blob([await f.arrayBuffer()], {type:f.type}); throw new Error(`원본 파일을 읽을 수 없어요: ${e.path || '고른 파일'}`); }
+}
+async function runSave(plan){
+  // 1) 바뀐 칸의 원본만 메모리로 (쓰기·삭제 전에 먼저: 같은 폴더 안에서 이름을 맞바꿔도 안전)
+  const bufs = await pool(plan.writes, 6, w => readSource(RES.get(w.key)));
+  const extra = [];
+  if (plan.layoutFile) extra.push({path:LAYOUT_FILE, blob:new Blob([plan.layoutFile], {type:'application/json'})});
+  if (plan.csv){
+    extra.push({path:'Dialog/Dialog.csv', blob:new Blob([plan.csv.text], {type:'text/csv;charset=utf-8'})});
+  }
+  // 2) 필요한 폴더만 만들고(순서대로) 지정한 이름으로 복제(동시에)
+  const dirs = new Set(plan.dirsMake);
+  plan.writes.forEach(w => dirs.add(w.path.split('/').slice(0, -1).join('/')));
+  extra.forEach(x => dirs.add(x.path.split('/').slice(0, -1).join('/')));
+  for (const d of dirs) await getDir(d, true);
+  await pool(plan.writes, 6, (w, i) => writeFile(w.path, bufs[i]));
+  await pool(extra, 2, x => writeFile(x.path, x.blob));
+  // 3) 기록된 옛 파일만 지우기
+  const delList = [...plan.dels.keys()];
+  const removed = (await pool(delList, 6, removeFile)).filter(Boolean).length;
+  for (const d of plan.dirsDrop.sort((a, b) => b.dir.split('/').length - a.dir.split('/').length)){
+    try { const [p, n] = await dirOf(d.dir, false); await p.removeEntry(n, {recursive:d.recursive}); } catch {}
+  }
+  // 4) 기록 정리
+  plan.writes.forEach((w, i) => { const e = RES.get(w.key); e.path = w.path; e.blob = bufs[i]; e.handle = null; DIRTY.delete(w.key); });
+  delList.forEach(p => DEL.delete(p));
+  plan.dirsMake.forEach(d => SAVED_DIRS.add(d.toLowerCase()));
+  plan.dirsDrop.forEach(d => { SAVED_DIRS.delete(d.dir.toLowerCase()); DELDIRS.delete(d.dir); });
+  if (plan.csv) SYNC.csvHash = plan.csv.hash;
+  if (plan.layoutFile) SYNC.layout = plan.layoutFile;
+  // 5) 한글 이름·블럭 배치가 바뀐 경우에만 editor-data.json
+  if (plan.names.length || plan.layout || plan.csv || !EDATA?.names?.chars){
+    const d = EDATA || (await readEditorData()) || {};
+    d.about = '비주얼 노벨 대사·리소스 편집기가 한글 이름과 대사 블럭 배치를 기억하는 파일이에요. 게임은 이 파일을 읽지 않아요.';
+    d.version = 1; d.names = d.names || {};
+    ['chars', 'bg', 'sound', 'ending'].forEach(sc => { if (plan.scopes.includes(sc)) Object.assign(d.names, namesOf(sc)); });
+    if (plan.scopes.includes('dialog')) d.dialog = Object.assign({csvHash:SYNC.csvHash}, JSON.parse(dialogSnap()));
+    d.savedAt = new Date().toISOString();
+    await writeFile(EDITOR_DATA, new Blob([JSON.stringify(d, null, 1)], {type:'application/json'}));
+    EDATA = d;
+  }
+  plan.scopes.forEach(sc => markSynced(sc));
+  refresh({side:true});
+  return {written:plan.writes.length + extra.length, removed};
+}
+
+/* ---------- 불러오기 / 저장 창 ---------- */
+function scopeText(all){ return all ? '모든 폴더 (Characters, UI, Backgrounds, Sounds, Endings, Dialog)' : TAB_SCOPE[curTab]; }
+function folderNote(){
+  if (!FS.supported) return '<p class="mwarn">이 브라우저는 폴더 연결을 지원하지 않아요. 크롬이나 엣지에서 여세요.</p>';
+  if (!FS.root) return `<p class="mwarn">게임 폴더가 연결되지 않았어요. 위쪽 ‘폴더 연결’을 먼저 눌러 주세요.</p>`;
+  return '';
+}
+$('#loadBtn').onclick = () => {
+  if (!FS.root) return;
+  showModal(`<h2>불러오기</h2>
+    <p class="mcaution">불러오면 지금 에디터의 내용이 게임 폴더의 내용으로 바뀌고, 저장하지 않은 작업은 사라져요. 먼저 저장했는지 확인하세요.</p>
+    <label class="switch"><input type="checkbox" id="m-all"><span class="knob"></span>모든 폴더 내용 불러오기</label>
+    <p class="mscope" id="m-scope"></p>
+    ${folderNote()}
+    <button class="linkish" id="m-file">게임 폴더 대신 파일에서 불러오기 (.json · .csv)</button>
+    <div class="mrow"><button class="btn" id="m-cancel">취소</button><button class="btn primary" id="m-go"${FS.root ? '' : ' disabled'}>불러오기</button></div>`);
+  const upd = () => { const all = $('#m-all').checked; $('#m-scope').innerHTML = `불러올 범위: <b>${esc(scopeText(all))}</b><br>${all ? '모든 탭이 폴더 내용으로 새로 그려져요.' : '다른 탭은 그대로 두고 이 탭만 폴더 내용으로 새로 그려요.'} 폴더에 없는 항목은 에디터에서도 사라져요.`; };
+  $('#m-all').onchange = upd; upd();
+  $('#m-cancel').onclick = closeModal;
+  $('#m-file').onclick = async () => { closeModal(); if (await confirmModal('파일에서 불러올까요?', '<p>고른 파일(.json · .csv)의 내용으로 에디터 전체가 바뀌어요. 고른 이미지·소리는 다시 연결해야 할 수 있어요.</p>', '파일 고르기')) $('#openFile').click(); };
+  $('#m-go').onclick = () => { const all = $('#m-all').checked; closeModal(); runLoad(all); };
+  $('#m-cancel').focus();
+};
+$('#saveBtn').onclick = () => {
+  flushPending(); refresh();
+  showModal(`<h2>저장</h2>
+    <p class="mcaution">‘저장 전’ 항목을 게임 폴더에 복제하고, 에디터에서 지우거나 이름을 바꾼 항목의 옛 파일은 폴더에서 삭제돼요. 저장하기 전에 게임 폴더를 확인해 주세요.</p>
+    <label class="switch"><input type="checkbox" id="m-all"><span class="knob"></span>모든 폴더 내용 저장하기</label>
+    <div class="mscope" id="m-plan"></div>
+    ${folderNote()}
+    <button class="linkish" id="m-export">게임 폴더 대신 파일로 내보내기 (프로젝트 .json · CSV)</button>
+    <div class="mrow"><button class="btn" id="m-cancel">취소</button><button class="btn primary" id="m-go" disabled>저장</button></div>`);
+  let plan = null;
+  const upd = () => {
+    const all = $('#m-all').checked, scopes = all ? ALL_SCOPES : [curTab];
+    const box = $('#m-plan'); plan = null; $('#m-go').disabled = true;
+    let h = `저장할 범위: <b>${esc(scopeText(all))}</b>`;
+    if (!FS.root){ box.innerHTML = h; return; }
+    const p = planSave(scopes);
+    if (p.empty){ box.innerHTML = h + '<br>저장할 변경이 없어요. 게임 폴더와 에디터가 같아요.'; return; }
+    const dropDirs = p.dirsDrop.filter(d => d.recursive);
+    h += `<br>복제할 파일 <b>${p.writes.length + (p.csv ? 1 : 0) + (p.layoutFile ? 1 : 0)}개</b> · 지울 파일 <b class="${p.dels.size || dropDirs.length ? 'neg' : ''}">${p.dels.size}개${dropDirs.length ? ` · 폴더 ${dropDirs.length}개` : ''}</b>`;
+    if (p.dels.size || dropDirs.length) h += `<ul class="dlist">${dropDirs.map(d => `<li>${esc(d.dir)}/ 폴더째 (안에 남은 다른 파일 포함)</li>`).join('')}${[...p.dels.keys()].map(f => `<li>${esc(f)}</li>`).join('')}</ul>`;
+    if (p.writes.some(w => w.old)) h += '<span>이름을 바꾼 항목은 새 이름으로 먼저 복제한 뒤 옛 이름의 파일을 지워요.</span>';
+    if (p.layoutFile) h += '<br>화면 배치·글자 설정·게임 제목·메인 화면 BGM: UI/Layout.json을 써요';
+    if (scopes.includes('dialog')) h += `<br>대사: ${p.csv ? 'Dialog.csv를 새로 써요' : p.layout ? '블럭 배치만 바뀌어서 editor-data.json만 고쳐요' : '바뀐 내용이 없어요'}`;
+    if (p.noFile.length) h += `<br><span class="mwarn-i">파일을 고르지 않은 항목 ${p.noFile.length}개(${esc(p.noFile.slice(0, 4).join(', '))}${p.noFile.length > 4 ? ' 등' : ''})는 폴더에 저장되지 않아, 다음에 불러오면 사라져요.</span>`;
+    const errs = scopes.includes('dialog') ? lastIssues.list.filter(i => i.lvl === 'err').length : 0;
+    if (errs) h += `<br><span class="mwarn-i">대사에 검사 오류가 ${errs}개 있어요. 게임이 멈출 수 있어요.</span>`;
+    if (p.dup) h += `<br><span class="mwarn-i">같은 이름으로 저장될 파일이 있어요: ${esc(p.dup)}. 이름을 고친 뒤 저장하세요.</span>`;
+    box.innerHTML = h; plan = p.dup ? null : p; $('#m-go').disabled = !plan;
+  };
+  $('#m-all').onchange = upd; upd();
+  $('#m-cancel').onclick = closeModal;
+  $('#m-export').onclick = () => { closeModal(); openPop($('#saveBtn'), `
+    <button class="menu-item" data-v="json"><span>프로젝트 파일 (.json)<small>이 편집기에서 위치·이름까지 그대로 다시 열기</small></span></button>
+    <button class="menu-item" data-v="csv"><span>게임용 CSV (.csv)<small>대사 시트만, UTF-8</small></span></button>`, v => saveAs(v)); };
+  $('#m-go').onclick = async () => {
+    if (!plan) return;
+    const p = plan; $('#m-go').disabled = true; $('#m-go').textContent = '저장하는 중…';
+    try { const r = await runSave(p); closeModal(); toast(r.written || r.removed ? `게임 폴더에 저장했어요. 파일 ${r.written}개를 복제하고 ${r.removed}개를 지웠어요.` : '게임 폴더에 저장했어요.'); }
+    catch (err){ closeModal(); infoModal('저장하지 못했어요', `<p>${esc(err?.message || String(err))}</p><p style="font-size:12.5px">원본을 먼저 모두 읽은 뒤에 쓰기 때문에, 읽기 단계에서 멈췄다면 폴더는 바뀌지 않았어요.</p>`); }
+  };
+  $('#m-cancel').focus();
+};
+
+function load(d){
+  P = normalizeProject(d); sel.blocks = new Set(); sel.edge = null; if (linkFrom) endLink();
+  P.characters.forEach(c => { if (c.img) THUMBS.set(c.id, c.img); });
+  for (const [, el] of els) el.remove(); els.clear();
+  $('#title').value = P.title || '';
+  hist.restoring = true; refresh({insp:true, side:true}); hist.restoring = false;
+  resetHistory();
+  if (curTab === 'dialog') requestAnimationFrame(() => { drawEdges(); fitView(); }); else needFit = true;
+}
+load(sampleProject());
+switchTab('dialog');
+restoreRoot();
+addEventListener('resize', () => applyView());
+ws.addEventListener('scroll', () => { ws.scrollTop = 0; ws.scrollLeft = 0; });
+</script>
+</body>
+</html>
