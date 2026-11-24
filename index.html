@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>게임 제목</title>
+<title data-i18n="GAME_TITLE_DEFAULT">Game Title</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -274,6 +274,11 @@ em, i { font-style: normal; }
 
 .set-row { display: grid; grid-template-columns: 116px 1fr 44px; align-items: center; gap: 16px; }
 .set-row label { font-size: 18px; font-weight: 500; }
+.lang-sel {
+  grid-column: 2 / 4; height: 40px; padding: 0 12px; font-family: inherit; font-size: 16px;
+  background: var(--graphite); color: var(--paper); border: 2px solid var(--line); border-radius: 0; cursor: pointer;
+}
+.lang-sel:focus-visible { outline: 2px solid var(--white); outline-offset: 2px; }
 .set-row output { font-size: 16px; color: var(--mute); text-align: right; font-variant-numeric: tabular-nums; }
 input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: transparent; cursor: pointer; }
 input[type=range]::-webkit-slider-runnable-track { height: 4px; background: var(--line); }
@@ -344,7 +349,7 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; background: var
     <!-- 로딩 -->
     <section id="scr-loading" class="screen on" aria-live="polite">
       <div class="center-col">
-        <div class="load-label" id="load-label">리소스 불러오는 중</div>
+        <div class="load-label" id="load-label" data-i18n="LOADING_RESOURCES">Loading resources</div>
         <div class="load-bar"><div class="load-fill" id="load-fill"></div></div>
       </div>
     </section>
@@ -352,11 +357,11 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; background: var
     <!-- 클릭해서 시작 -->
     <section id="scr-splash" class="screen">
       <div class="center-col">
-        <div class="splash-hint" id="splash-hint">화면을 클릭하면 시작해요</div>
+        <div class="splash-hint" id="splash-hint" data-i18n="SPLASH_HINT_START">Click the screen to start</div>
         <div class="splash-error" id="splash-error" hidden></div>
       </div>
-      <button class="splash-folder" id="btn-splash-folder" hidden>폴더 연결</button>
-      <div class="drop-overlay" id="splash-drop">여기에 게임 폴더를 놓으세요</div>
+      <button class="splash-folder" id="btn-splash-folder" hidden data-i18n="BTN_CONNECT_FOLDER">Connect Folder</button>
+      <div class="drop-overlay" id="splash-drop" data-i18n="DROP_GAME_FOLDER">Drop the game folder here</div>
     </section>
 
     <!-- 타이틀 -->
@@ -364,36 +369,36 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; background: var
       <div id="title-shade"></div>
       <div id="title-block">
         <img id="title-logo" alt="">
-        <h1 id="title-text">은하 익스프레스</h1>
+        <h1 id="title-text" data-i18n="SAMPLE_GAME_TITLE">Eunha Express</h1>
       </div>
       <nav id="title-menu">
-        <button class="menu-btn" id="btn-new">새 게임</button>
-        <button class="menu-btn" id="btn-load">불러오기</button>
-        <button class="menu-btn" id="btn-title-settings">설정</button>
+        <button class="menu-btn" id="btn-new" data-i18n="BTN_NEW_GAME">New Game</button>
+        <button class="menu-btn" id="btn-load" data-i18n="BTN_LOAD">Load</button>
+        <button class="menu-btn" id="btn-title-settings" data-i18n="BTN_SETTINGS">Settings</button>
       </nav>
       <div id="title-foot">
         <span id="ending-progress"></span>
         <span id="pack-label"></span>
         <span id="missing-note"></span>
         <span class="spacer"></span>
-        <button class="text-link" id="btn-reset-pack" hidden>기본 리소스로 돌아가기</button>
-        <button class="text-link" id="btn-custom">커스텀 폴더 불러오기</button>
+        <button class="text-link" id="btn-reset-pack" hidden data-i18n="BTN_RESET_PACK">Back to default resources</button>
+        <button class="text-link" id="btn-custom" data-i18n="BTN_LOAD_CUSTOM">Load custom folder</button>
         <input type="file" id="folder-input" webkitdirectory directory multiple hidden>
       </div>
-      <div id="drop-overlay">여기에 커스텀 폴더를 놓으세요</div>
+      <div id="drop-overlay" data-i18n="DROP_CUSTOM_FOLDER">Drop the custom folder here</div>
     </section>
 
     <!-- 게임 -->
     <section id="scr-game" class="screen">
       <div id="bg-layer"><img id="bg-img" alt=""></div>
       <div id="portrait-layer"><img id="portrait" alt=""></div>
-      <div id="choices" role="listbox" aria-label="선택지"></div>
+      <div id="choices" role="listbox" aria-label="Choice" data-i18n-attr="aria-label:LABEL_CHOICE"></div>
       <div id="dialog">
         <div id="namebox"><i class="nb nb-m"></i><i class="nb nb-l"></i><i class="nb nb-r"></i><span id="namebox-text"></span></div>
         <p id="line-text"></p>
         <div id="next-mark"></div>
       </div>
-      <button id="btn-settings" aria-label="설정 열기"><span class="bars"><span></span><span></span><span></span></span></button>
+      <button id="btn-settings" aria-label="Open settings" data-i18n-attr="aria-label:ARIA_OPEN_SETTINGS"><span class="bars"><span></span><span></span><span></span></span></button>
     </section>
 
     <!-- 엔딩 -->
@@ -404,43 +409,47 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; background: var
         <div id="ending-title"></div>
         <div id="ending-count"></div>
       </div>
-      <button class="solid-btn" id="btn-ending-title">메인 화면으로</button>
+      <button class="solid-btn" id="btn-ending-title" data-i18n="BTN_TO_MAIN">Main Screen</button>
     </section>
 
     <!-- 설정 팝업 (어디서 열어도 같은 팝업) -->
     <div class="modal-back" id="settings-back">
       <div id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-h">
         <div class="panel-head">
-          <h2 id="settings-h">설정</h2>
-          <button class="close-x" id="btn-settings-close" aria-label="설정 닫기"></button>
+          <h2 id="settings-h" data-i18n="BTN_SETTINGS">Settings</h2>
+          <button class="close-x" id="btn-settings-close" aria-label="Close settings" data-i18n-attr="aria-label:ARIA_CLOSE_SETTINGS"></button>
         </div>
         <div class="set-row">
-          <label for="vol-bgm">배경음</label>
+          <label for="vol-bgm" data-i18n="LABEL_BGM_VOLUME">Music</label>
           <input type="range" id="vol-bgm" min="0" max="100" step="5">
           <output id="vol-bgm-out"></output>
         </div>
         <div class="set-row">
-          <label for="vol-sfx">효과음</label>
+          <label for="vol-sfx" data-i18n="LABEL_SFX_VOLUME">Sound FX</label>
           <input type="range" id="vol-sfx" min="0" max="100" step="5">
           <output id="vol-sfx-out"></output>
         </div>
         <div class="set-row">
-          <label>글자 속도</label>
+          <label data-i18n="LABEL_TEXT_SPEED">Text speed</label>
           <div class="seg" id="speed-seg">
-            <button data-speed="20">느리게</button>
-            <button data-speed="40">보통</button>
-            <button data-speed="80">빠르게</button>
-            <button data-speed="0">즉시</button>
+            <button data-speed="20" data-i18n="SPEED_SLOW">Slow</button>
+            <button data-speed="40" data-i18n="SPEED_NORMAL">Normal</button>
+            <button data-speed="80" data-i18n="SPEED_FAST">Fast</button>
+            <button data-speed="0" data-i18n="SPEED_INSTANT">Instant</button>
           </div>
         </div>
+        <div class="set-row">
+          <label for="lang-sel">Language</label>
+          <select id="lang-sel" class="lang-sel" aria-label="Language"></select>
+        </div>
         <div class="panel-actions" id="game-actions">
-          <button class="primary" id="btn-save">저장하기</button>
-          <button id="btn-to-title">메인 화면으로</button>
+          <button class="primary" id="btn-save" data-i18n="BTN_SAVE_GAME">Save</button>
+          <button id="btn-to-title" data-i18n="BTN_TO_MAIN">Main Screen</button>
         </div>
         <div class="panel-foot">
-          <button class="dl-btn" id="btn-endings">엔딩 목록</button>
-          <button class="dl-btn" id="btn-download">커스터마이징 파일 다운로드</button>
-          <p class="panel-note">받은 파일의 ReadMe_제작자용.txt를 따라 이미지와 대사를 바꿔 나만의 게임을 만들 수 있어요.</p>
+          <button class="dl-btn" id="btn-endings" data-i18n="BTN_ENDING_LIST">Ending List</button>
+          <button class="dl-btn" id="btn-download" data-i18n="BTN_DOWNLOAD_KIT">Download Customizing Kit</button>
+          <p class="panel-note" data-i18n="SETTINGS_KIT_NOTE">Follow ReadMe_제작자용.txt in the downloaded files to change images and dialogue and make your own game.</p>
         </div>
       </div>
     </div>
@@ -450,12 +459,12 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; background: var
     <div class="modal-back" id="endings-back">
       <div id="endings-panel" role="dialog" aria-modal="true" aria-labelledby="endings-h">
         <div class="panel-head">
-          <h2 id="endings-h">엔딩 목록</h2>
-          <button class="close-x" id="btn-endings-close" aria-label="엔딩 목록 닫기"></button>
+          <h2 id="endings-h" data-i18n="BTN_ENDING_LIST">Ending List</h2>
+          <button class="close-x" id="btn-endings-close" aria-label="Close ending list" data-i18n-attr="aria-label:ARIA_CLOSE_ENDINGS"></button>
         </div>
         <div class="endings-top">
           <span id="endings-count"></span>
-          <button class="ghost-btn" id="btn-endings-clear">엔딩 기록 삭제</button>
+          <button class="ghost-btn" id="btn-endings-clear" data-i18n="BTN_CLEAR_ENDINGS">Delete Ending Records</button>
         </div>
         <ul id="endings-list"></ul>
       </div>
@@ -465,8 +474,8 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; background: var
       <div id="confirm-panel" role="alertdialog" aria-modal="true">
         <p id="confirm-msg"></p>
         <div class="confirm-actions">
-          <button class="ghost-btn" id="btn-confirm-no">취소</button>
-          <button class="solid-btn" id="btn-confirm-yes" style="min-width:140px">확인</button>
+          <button class="ghost-btn" id="btn-confirm-no" data-i18n="BTN_CANCEL">Cancel</button>
+          <button class="solid-btn" id="btn-confirm-yes" style="min-width:140px" data-i18n="BTN_OK">OK</button>
         </div>
       </div>
     </div>
@@ -478,17 +487,66 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; background: var
 <script>
 'use strict';
 
+/* ======================= 로컬라이징 =======================
+   화면에 보이는 글은 모두 스트링 키(대문자 영어)로 적고, 지금 언어의 열 값을 찾아 씀.
+   표(L10N_DATA)는 이 파일 맨 아래에 있음. 언어를 늘리려면 LANGS에 한 줄, 표의 각 키에 그 언어 열을 추가 */
+const LANGS = [
+  { code: 'en',      name: 'English' },
+  { code: 'ko',      name: '한국어' },
+  { code: 'ja',      name: '日本語' },
+  { code: 'zh-Hans', name: '简体中文' },
+  { code: 'zh-Hant', name: '繁體中文' }
+];
+const LANG_STORE = 'vn-lang';
+let LANG = (() => { // 지금 언어 (기본 영어, 고른 언어는 브라우저에 기억)
+  try { const v = localStorage.getItem(LANG_STORE); if (LANGS.some(l => l.code === v)) return v; } catch (e) {}
+  return 'en';
+})();
+let L10N_CACHE = null;
+function T(key, args) { // 스트링 키 → 지금 언어의 글 ({0}, {1}… 자리에 args)
+  if (!L10N_CACHE) L10N_CACHE = L10N_DATA();
+  const row = L10N_CACHE[key];
+  let s = row ? (row[LANG] ?? row.en ?? key) : key;
+  if (args) s = s.replace(/\{(\d+)\}/g, (m, i) => (args[i] ?? '') + '');
+  return s;
+}
+class LStr { // 파일을 읽을 때 정해지는 값(목록·설정)용: 쓰는 순간의 언어로 바뀜
+  constructor(k, a) { this.k = k; this.a = a; }
+  toString() { return T(this.k, this.a); }
+  valueOf() { return T(this.k, this.a); }
+  toJSON() { return T(this.k, this.a); }
+}
+const L = (k, a) => new LStr(k, a);
+function applyI18n(root) { // HTML에 적어 둔 data-i18n 표시를 지금 언어로
+  root = root || document;
+  root.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = T(el.dataset.i18n); });
+  root.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = T(el.dataset.i18nHtml); });
+  root.querySelectorAll('[data-i18n-attr]').forEach(el => {
+    el.dataset.i18nAttr.split(';').forEach(p => { const [a, k] = p.split(':'); if (a && k) el.setAttribute(a, T(k)); });
+  });
+  document.documentElement.lang = LANG;
+}
+function setLang(code) { // 언어 바꾸기: 기억하고 화면 글을 모두 다시 씀
+  if (!LANGS.some(l => l.code === code)) return;
+  LANG = code;
+  try { localStorage.setItem(LANG_STORE, code); } catch (e) {}
+  applyI18n();
+  if (typeof onLangChange === 'function') onLangChange();
+}
+function langOptions() { return LANGS.map(l => `<option value="${l.code}"${l.code === LANG ? ' selected' : ''}>${l.name}</option>`).join(''); }
+applyI18n();
+
 /* =========================================================
    CONFIG — 경로와 이름 규칙은 전부 여기서 관리
    ========================================================= */
 const CONFIG = {
-  gameTitle: '게임 제목',                    // UI/Layout.json에 제목이 있으면 그 제목을 씀 (에디터에서 바꿈)
+  gameTitle: L('GAME_TITLE_DEFAULT'),                    // UI/Layout.json에 제목이 있으면 그 제목을 씀 (에디터에서 바꿈)
   layoutFile: 'UI/Layout.json',             // 에디터 UI 탭에서 바꾼 위치·크기·글자 설정
   dialogCsv: 'Dialog/Dialog.csv',          // 게임이 읽는 대사 CSV
   dialogDir: 'Dialog/',                     // 커스텀 폴더에서 CSV를 못 찾으면 이 폴더의 첫 .csv 사용
   imageExt: '.png',                         // 캐릭터·배경·UI 이미지 확장자 (소문자)
   bgDir: 'Backgrounds/',                    // bg_xxx → Backgrounds/xxx.png
-  customPackUrl: 'https://github.com/jinjooyoung/Zombie-Apocalypse_Visual-Novel/archive/refs/heads/main.zip',   // 설정 창 ‘커스터마이징 파일 다운로드’ 버튼이 여는 주소
+  customPackUrl: 'https://github.com/jinjooyoung?tab=repositories',   // 설정 창 ‘커스터마이징 파일 다운로드’ 버튼이 여는 주소
   narratorNames: ['내레이터'],              // 이름표와 초상화를 숨기는 화자
   // 글꼴: 있으면 이 글꼴, 없으면 Noto Sans KR. 이름만 같으면 .otf·.woff 내용이어도 읽힘
   fonts: [
@@ -633,7 +691,7 @@ function decodeCsv(buf) {
   try {
     return { text: new TextDecoder('utf-8', { fatal: true }).decode(buf), enc: 'UTF-8' };
   } catch {
-    log.warn('CSV가 UTF-8이 아니어서 CP949(EUC-KR)로 다시 읽었어요. 엑셀에서 ‘CSV UTF-8(쉼표로 분리)’로 저장하는 걸 권장해요.');
+    log.warn(T('LOG_CSV_NOT_UTF8'));
     return { text: new TextDecoder('euc-kr').decode(buf), enc: 'CP949' };
   }
 }
@@ -668,10 +726,10 @@ function idOrder(id) {
 }
 
 function buildScript(table) {
-  if (!table.length) throw new Error('CSV가 비어 있어요.');
+  if (!table.length) throw new Error(T('ERR_CSV_EMPTY'));
   const keys = table[0].map(k => k.trim());
   for (const need of ['id', 'type', 'text', 'next']) {
-    if (!keys.includes(need)) throw new Error(`CSV 1행에 ‘${need}’ 열이 없어요. [대사] 시트를 그대로 저장했는지 확인하세요.`);
+    if (!keys.includes(need)) throw new Error(T('ERR_CSV_MISSING_COLUMN', [need]));
   }
   const rows = [];
   for (let r = 1; r < table.length; r++) {
@@ -679,7 +737,7 @@ function buildScript(table) {
     keys.forEach((k, ci) => { o[k] = (table[r][ci] ?? '').replace(/\r\n?/g, '\n').trim(); });
     if (!o.id || o.id === 'ID' || o.type === '구분') continue;   // 빈 행, 2행(한글 열 이름) 건너뜀
     const t = TYPE_MAP[o.type];
-    if (!t) { log.warn(`${o.id}: 알 수 없는 구분 ‘${o.type}’ → 건너뜀`); continue; }
+    if (!t) { log.warn(T('LOG_UNKNOWN_TYPE_SKIP', [o.id, o.type])); continue; }
     o.type = t;
     rows.push(o);
   }
@@ -687,22 +745,22 @@ function buildScript(table) {
   if (rows.every(r => idOrder(r.id) != null)) {
     rows.sort((a, b) => idOrder(a.id) - idOrder(b.id));
   } else {
-    log.warn('ID 형식(S1-010)이 아닌 줄이 있어서 CSV의 행 순서를 그대로 사용해요.');
+    log.warn(T('LOG_ID_FORMAT_ORDER'));
   }
   const index = new Map();
   rows.forEach((r, i) => {
-    if (index.has(r.id)) log.error(`ID 중복: ${r.id}`);
+    if (index.has(r.id)) log.error(T('LOG_DUPLICATE_ID', [r.id]));
     index.set(r.id, i);
   });
   // 점검
   rows.forEach((r, i) => {
-    if (r.next && !index.has(r.next)) log.error(`${r.id}: 다음 ID ‘${r.next}’가 없어요.`);
-    if (r.type === 'choice' && !r.next) log.error(`${r.id}: 선택지에 다음 ID가 없어요.`);
-    if (r.type === 'branch' && (!r.next || !r.cond_flag)) log.error(`${r.id}: 분기 줄에는 조건 플래그와 다음 ID가 필요해요.`);
-    if (r.cond_flag && !r.cond_state) log.warn(`${r.id}: 조건 상태가 비어 있어 ‘켜짐’으로 처리해요.`);
+    if (r.next && !index.has(r.next)) log.error(T('LOG_NEXT_ID_MISSING', [r.id, r.next]));
+    if (r.type === 'choice' && !r.next) log.error(T('LOG_CHOICE_NO_NEXT', [r.id]));
+    if (r.type === 'branch' && (!r.next || !r.cond_flag)) log.error(T('LOG_BRANCH_NEEDS', [r.id]));
+    if (r.cond_flag && !r.cond_state) log.warn(T('LOG_EMPTY_STATE_ON', [r.id]));
     if (r.type === 'choice' && i > 0 && rows[i - 1].type !== 'choice') {
       const q = rows[i - 1];
-      if (q.type !== 'line' || q.next) log.error(`${r.id}: 선택지 바로 위에는 다음 ID가 빈 질문 대사가 있어야 해요.`);
+      if (q.type !== 'line' || q.next) log.error(T('LOG_CHOICE_NEEDS_QUESTION', [r.id]));
     }
   });
   // 배경 경로: bg_path 열이 있으면 그것을, 없으면 bg_xxx → Backgrounds/xxx
@@ -746,7 +804,7 @@ const Assets = {
     const f = this.files.get(path);
     if (f) { const u = URL.createObjectURL(f); this.blobs.push(u); return u; }
     const near = this.lower.get(path.toLowerCase());
-    if (near) log.warn(`대소문자가 달라요: 필요한 이름 ‘${path}’ / 폴더에 있는 이름 ‘${near}’`);
+    if (near) log.warn(T('LOG_CASE_MISMATCH', [path, near]));
     return null;
   },
   async readText(path) {
@@ -759,9 +817,9 @@ const Assets = {
     if (!f) {
       const alt = [...this.files.keys()].find(p => p.startsWith(CONFIG.dialogDir) && p.toLowerCase().endsWith('.csv'))
                || [...this.files.keys()].find(p => p.toLowerCase().endsWith('.csv'));
-      if (alt) { log.warn(`${path}이 없어서 ${alt}를 대사 파일로 사용해요.`); f = this.files.get(alt); }
+      if (alt) { log.warn(T('LOG_CSV_FALLBACK', [path, alt])); f = this.files.get(alt); }
     }
-    if (!f) throw new Error(`${path} 파일이 폴더에 없어요.`);
+    if (!f) throw new Error(T('ERR_FILE_NOT_IN_FOLDER', [path]));
     return decodeCsv(await f.arrayBuffer());
   },
 
@@ -776,10 +834,10 @@ const Assets = {
       try {
         const bm = await createImageBitmap(blob); const entry = { ok: true, blob, real: p, w: bm.width, h: bm.height }; bm.close && bm.close();
         this.images.set(path, entry); return entry;
-      } catch { log.warn(`${p}를 이미지로 읽지 못했어요.`); }
+      } catch { log.warn(T('LOG_IMAGE_READ_FAIL', [p])); }
     }
-    if (optional) { log.info(`${path} 없음 → 컷씬 없이 진행`); const en = { ok: false }; this.images.set(path, en); return en; }
-    this.missing.add(path); log.warn(`[리소스 없음] ${path} (.gif, .webp도 없음)`);
+    if (optional) { log.info(T('LOG_NO_CUTSCENE', [path])); const en = { ok: false }; this.images.set(path, en); return en; }
+    this.missing.add(path); log.warn(T('LOG_MISSING_ANIM', [path]));
     const entry = { ok: false, src: placeholder(kind, path) }; this.images.set(path, entry); return entry;
   },
   async readBlob(p, warnCase) {
@@ -787,7 +845,7 @@ const Assets = {
       try { const r = await fetch(this.url(p)); return r.ok ? await r.blob() : null; } catch { return null; }
     }
     const f = this.files.get(p);
-    if (!f && warnCase) { const near = this.lower.get(p.toLowerCase()); if (near) log.warn(`대소문자가 달라요: 필요한 이름 ‘${p}’ / 폴더에 있는 이름 ‘${near}’`); }
+    if (!f && warnCase) { const near = this.lower.get(p.toLowerCase()); if (near) log.warn(T('LOG_CASE_MISMATCH', [p, near])); }
     return f || null;
   },
   loadImage(path, kind) {
@@ -796,9 +854,9 @@ const Assets = {
       const done = (entry) => { this.images.set(path, entry); resolve(entry); };
       const u = this.url(path);
       const fail = () => {
-        if (kind === 'ui') { log.info(`${path} 없음 → 기본 디자인 사용`); done({ ok: false, src: null }); return; }
+        if (kind === 'ui') { log.info(T('LOG_UI_DEFAULT', [path])); done({ ok: false, src: null }); return; }
         this.missing.add(path);
-        log.warn(`[리소스 없음] ${path}`);
+        log.warn(T('LOG_MISSING_RESOURCE', [path]));
         done({ ok: false, src: placeholder(kind, path) });
       };
       if (!u) { fail(); return; }
@@ -812,28 +870,28 @@ const Assets = {
     try {
       if (this.mode === 'web') { const r = await fetch(this.url(path), { cache: 'no-cache' }); if (!r.ok) return null; return JSON.parse(decodeCsv(await r.arrayBuffer()).text); }
       const f = this.files.get(path); return f ? JSON.parse(decodeCsv(await f.arrayBuffer()).text) : null;
-    } catch (err) { log.warn(`${path}를 읽지 못해서 기본 배치를 써요: ${err.message}`); return null; }
+    } catch (err) { log.warn(T('LOG_LAYOUT_READ_FAIL', [path, err.message])); return null; }
   },
   async loadFont(path, weight) {
     const u = this.url(path);
-    if (!u) { log.info(`${path} 없음 → 기본 글꼴 사용`); return; }
+    if (!u) { log.info(T('LOG_FONT_DEFAULT', [path])); return; }
     try {
       const face = new FontFace('GameFont', `url("${u}")`, { weight, style: 'normal', display: 'swap' });
       await face.load(); document.fonts.add(face); this.fontFaces.push(face);
-    } catch { log.info(`${path}를 읽지 못해서 기본 글꼴을 써요`); }
+    } catch { log.info(T('LOG_FONT_READ_FAIL', [path])); }
   },
   loadAudio(path) {
     if (this.audio.has(path)) return Promise.resolve(this.audio.get(path));
     return new Promise(resolve => {
       const done = (entry) => { this.audio.set(path, entry); resolve(entry); };
       const u = this.url(path);
-      if (!u) { log.info(`[소리 없음] ${path} → 소리 없이 진행`); done({ ok: false, src: null }); return; }
+      if (!u) { log.info(T('LOG_NO_SOUND', [path])); done({ ok: false, src: null }); return; }
       const a = new Audio();
       let settled = false;
       const ok = () => { if (settled) return; settled = true; done({ ok: true, src: u }); };
       const bad = () => {
         if (settled) return; settled = true;
-        log.info(`[소리 없음] ${path} → 소리 없이 진행`);
+        log.info(T('LOG_NO_SOUND', [path]));
         done({ ok: false, src: null });
       };
       a.preload = 'auto';
@@ -866,7 +924,7 @@ function placeholder(kind, path) {
     ? `<rect width="${w}" height="${h}" fill="#2B2E32"/>`
     : `<rect x="${(w - fw) / 2}" y="${h - fh}" width="${fw}" height="${fh}" fill="#2B2E32" stroke="#8C9198" stroke-width="4" stroke-dasharray="16 10"/>`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${body}`
-    + `<text x="50%" y="${isBg ? '40%' : '45%'}" text-anchor="middle" font-family="sans-serif" font-size="${isBg ? 26 : 20}" fill="#8C9198">파일 없음</text>`
+    + `<text x="50%" y="${isBg ? '40%' : '45%'}" text-anchor="middle" font-family="sans-serif" font-size="${isBg ? 26 : 20}" fill="#8C9198">${T('PLACEHOLDER_NO_FILE')}</text>`
     + `<text x="50%" y="${isBg ? '46%' : '51%'}" text-anchor="middle" font-family="sans-serif" font-size="${isBg ? 22 : 16}" fill="#C4C8CD">${esc}</text></svg>`;
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
@@ -894,7 +952,7 @@ function bgPath(key) {
    ========================================================= */
 async function loadEverything() {
   showScreen('scr-loading');
-  setLoad(0, 1, Assets.mode === 'custom' ? `‘${Assets.rootName}’ 폴더 불러오는 중` : '대사 불러오는 중');
+  setLoad(0, 1, Assets.mode === 'custom' ? T('LOADING_FOLDER', [Assets.rootName]) : T('LOADING_DIALOGUE'));
   Assets.reset();
   Game.script = null;
 
@@ -902,7 +960,7 @@ async function loadEverything() {
   try {
     csv = await Assets.readText(CONFIG.dialogCsv);
   } catch (err) {
-    log.error('대사 CSV를 읽지 못했어요:', err.message);
+    log.error(T('LOG_CSV_READ_FAIL'), err.message);
     return { ok: false, reason: 'csv', detail: err.message };
   }
   try {
@@ -911,7 +969,7 @@ async function loadEverything() {
     log.error(err.message);
     return { ok: false, reason: 'parse', detail: err.message };
   }
-  log.info(`대사 ${Game.script.rows.length}줄 (${csv.enc})`);
+  log.info(T('LOG_DIALOGUE_LINES', [Game.script.rows.length, csv.enc]));
   Layout = mergeLayout(await Assets.readJson(CONFIG.layoutFile));
   applyLayout();
 
@@ -930,14 +988,15 @@ async function loadEverything() {
     add(r.sfx_path, x => Assets.loadAudio(x));
   }
   let done = 0;
-  setLoad(0, jobs.length, '리소스 불러오는 중');
+  setLoad(0, jobs.length, T('LOADING_RESOURCES'));
   const queue = jobs.slice();
   const worker = async () => {
-    while (queue.length) { await queue.shift()(); done++; setLoad(done, jobs.length, '리소스 불러오는 중'); }
+    while (queue.length) { await queue.shift()(); done++; setLoad(done, jobs.length, T('LOADING_RESOURCES')); }
   };
   await Promise.all(Array.from({ length: 6 }, worker));
   applySkin();
-  if (Assets.missing.size) log.warn(`빠진 파일 ${Assets.missing.size}개:\n` + [...Assets.missing].join('\n'));
+  if (Assets.missing.size) log.warn(`${T('LOG_MISSING_FILES', [Assets.missing.size])}
+` + [...Assets.missing].join('\n'));
   return { ok: true };
 }
 
@@ -1008,7 +1067,7 @@ const Sound = {
     if (!e.ok) return;
     const a = new Audio(e.src);    // 새 곡은 서서히 커짐 (겹쳐서 자연스럽게)
     a.loop = true; a.volume = 0; this.bgm = a;
-    if (this.unlocked) a.play().then(() => this.ramp(a, this.vol(), FADE_MS)).catch(err => log.warn('BGM 재생 실패:', path, err.message));
+    if (this.unlocked) a.play().then(() => this.ramp(a, this.vol(), FADE_MS)).catch(err => log.warn(T('LOG_BGM_PLAY_FAIL'), path, err.message));
   },
   stop(fade) {
     if (fade) this.fadeOut();
@@ -1069,12 +1128,12 @@ const Game = {
     const s = (r.cond_state || '켜짐').toLowerCase();
     let want = true;
     if (STATE_OFF.includes(s)) want = false;
-    else if (!STATE_ON.includes(s)) log.warn(`${r.id}: 조건 상태 ‘${r.cond_state}’를 몰라서 ‘켜짐’으로 처리해요.`);
+    else if (!STATE_ON.includes(s)) log.warn(T('LOG_UNKNOWN_STATE', [r.id, r.cond_state]));
     return this.hasFlag(r.cond_flag) === want;
   },
   jump(id, from) {
     const i = this.script.index.get(id);
-    if (i == null) { fail(`${from}의 다음 ID ‘${id}’를 찾을 수 없어요.`); return -1; }
+    if (i == null) { fail(T('ERR_NEXT_ID_NOT_FOUND', [from, id])); return -1; }
     return i;
   },
 
@@ -1090,7 +1149,7 @@ const Game = {
     const s = Store.get(this.key('save'), null);
     if (!s) return;
     const i = this.script.index.get(s.id);
-    if (i == null) { fail(`저장된 위치 ‘${s.id}’가 대사에 없어요. ID를 바꿨다면 새 게임으로 시작하세요.`); return; }
+    if (i == null) { fail(T('ERR_SAVE_POS_MISSING', [s.id])); return; }
     this.flags = new Set(s.flags || []);
     clearStage();
     showScreen('scr-game');
@@ -1108,7 +1167,7 @@ const Game = {
       id: r.id, flags: [...this.flags], bg: this.bg, bgm: Sound.current, at: Date.now()
     });
     if (ok) this.unsaved = false;
-    if (!silent) toast(ok ? '저장했어요' : '저장하지 못했어요. 브라우저 저장 공간 설정을 확인하세요.', !ok);
+    if (!silent) toast(ok ? T('TOAST_SAVED') : T('TOAST_SAVE_FAIL'), !ok);
   },
 
   // idx부터 화면에 보여줄 줄을 찾아 실행
@@ -1116,14 +1175,14 @@ const Game = {
     const rows = this.script.rows;
     for (let guard = 0; guard < 10000; guard++) {
       const r = rows[idx];
-      if (!r) { fail('대사가 끝났는데 엔딩 줄이 없어요. 마지막 줄의 다음 ID를 확인하세요.'); return; }
+      if (!r) { fail(T('ERR_NO_ENDING_ROW')); return; }
       if (r.type === 'branch') {
         idx = this.cond(r) ? this.jump(r.next, r.id) : idx + 1;
         if (idx < 0) return;
         continue;
       }
       if (r.type === 'choice') {   // 질문 없이 선택지 줄에 도착한 경우: 묶음 건너뜀
-        log.warn(`${r.id}: 질문 대사 없이 선택지에 도착해서 건너뛰어요.`);
+        log.warn(T('LOG_CHOICE_WITHOUT_QUESTION', [r.id]));
         while (rows[idx] && rows[idx].type === 'choice') idx++;
         continue;
       }
@@ -1132,14 +1191,14 @@ const Game = {
       this.showLine(idx, {});
       return;
     }
-    fail('분기가 끝없이 반복돼요. 분기 줄의 다음 ID를 확인하세요.');
+    fail(T('ERR_BRANCH_LOOP'));
   },
 
   applyFx(r, { sfx = true } = {}) {
     if (r.bg) this.setBg(r.bg);
     if (r.bgm_path) Sound.setBgm(r.bgm_path);
     else if (r.bgm === 'STOP') Sound.stop();
-    else if (r.bgm && !warnedBgm.has(r.bgm)) { warnedBgm.add(r.bgm); log.info(`BGM ‘${r.bgm}’의 파일이 정해지지 않아 소리 없이 진행해요.`); }
+    else if (r.bgm && !warnedBgm.has(r.bgm)) { warnedBgm.add(r.bgm); log.info(T('LOG_BGM_NO_FILE', [r.bgm])); }
     if (sfx && r.sfx_path) Sound.sfx(r.sfx_path);
     if (r.set_flag) this.setFlag(r.set_flag);
   },
@@ -1167,7 +1226,7 @@ const Game = {
       const group = [];
       for (let j = idx + 1; rows[j] && rows[j].type === 'choice'; j++) group.push(rows[j]);
       const visible = group.filter(c => this.cond(c));
-      if (!visible.length) { fail(`${r.id}: 보이는 선택지가 하나도 없어요. 조건 없는 선택지를 하나 이상 두세요.`); return; }
+      if (!visible.length) { fail(T('ERR_NO_VISIBLE_CHOICE', [r.id])); return; }
       this.choices = visible;
     }
 
@@ -1230,6 +1289,7 @@ const Game = {
   },
 
   ending(r) {
+    this.lastEnding = r;
     Sound.stopLoop();
     this.applyFx(r);
     this.unsaved = false; // 엔딩을 봐도 저장해 둔 진행은 그대로 (저장 직전으로 이어하기 가능)
@@ -1238,10 +1298,10 @@ const Game = {
     if (cut && cut.ok) { img.src = Assets.liveUrl('ending', endingPath(r.set_flag), 'bg'); img.style.display = 'block'; }
     else { img.removeAttribute('src'); img.style.display = 'none'; }
     const m = /^\[(.+?)\]\s*(.*)$/.exec(r.text || '');
-    $('ending-kind').textContent = m ? m[1] : '엔딩';
+    $('ending-kind').textContent = m ? m[1] : T('LABEL_ENDING');
     $('ending-title').textContent = m ? m[2] : (r.text || '');
     const got = [...this.endings].length;
-    $('ending-count').textContent = `모은 엔딩 ${got} / ${this.script.endingTotal}`;
+    $('ending-count').textContent = T('ENDINGS_COLLECTED', [got, this.script.endingTotal]);
     Typer.stop();
     showScreen('scr-ending');
   }
@@ -1347,6 +1407,7 @@ function toast(msg, isErr) {
 function fail(msg) { log.error(msg); toast(msg, true); }
 
 function openSettings() {
+  $('lang-sel').innerHTML = langOptions();
   $('game-actions').classList.toggle('hide', currentScreen() !== 'scr-game');
   $('vol-bgm').value = Settings.bgm; $('vol-bgm-out').textContent = Settings.bgm;
   $('vol-sfx').value = Settings.sfx; $('vol-sfx-out').textContent = Settings.sfx;
@@ -1358,7 +1419,7 @@ function closeSettings() { $('settings-back').classList.remove('on'); if (docume
 function settingsOpen() { return $('settings-back').classList.contains('on'); }
 
 let confirmResolve = null;
-function askConfirm(msg, yesLabel = '확인') {
+function askConfirm(msg, yesLabel = L('BTN_OK')) {
   $('confirm-msg').textContent = msg;
   $('btn-confirm-yes').textContent = yesLabel;
   $('confirm-back').classList.add('on');
@@ -1374,16 +1435,23 @@ function confirmOpen() { return $('confirm-back').classList.contains('on'); }
 /* =========================================================
    타이틀
    ========================================================= */
+function updateTitleFoot() { // 메인 화면 아래쪽 글 (언어를 바꿀 때도 다시 그림)
+  const s = Game.script;
+  $('ending-progress').textContent = s && s.endingTotal ? T('ENDINGS_COLLECTED', [[...Game.endings].length, s.endingTotal]) : '';
+  $('pack-label').textContent = Assets.mode === 'custom' ? T('CUSTOM_FOLDER_LABEL', [Assets.rootName]) : '';
+  $('missing-note').textContent = Assets.missing.size ? T('MISSING_FILES_NOTE', [Assets.missing.size]) : '';
+}
 function enterTitle() {
   clearStage();
   showScreen('scr-title');
   const s = Game.script;
   $('btn-new').disabled = !s;
   $('btn-load').disabled = !s || !Game.hasSave();
-  $('ending-progress').textContent = s && s.endingTotal ? `모은 엔딩 ${[...Game.endings].length} / ${s.endingTotal}` : '';
-  $('pack-label').textContent = Assets.mode === 'custom' ? `커스텀 폴더: ${Assets.rootName}` : '';
+  updateTitleFoot();
+  if (false) $('ending-progress').textContent = s && s.endingTotal ? T('ENDINGS_COLLECTED', [[...Game.endings].length, s.endingTotal]) : '';
+  $('pack-label').textContent = Assets.mode === 'custom' ? T('CUSTOM_FOLDER_LABEL', [Assets.rootName]) : '';
   $('btn-reset-pack').hidden = Assets.mode !== 'custom' || location.protocol === 'file:'; // 파일로 열었을 때는 돌아갈 기본 리소스가 없음
-  $('missing-note').textContent = Assets.missing.size ? `빠진 파일 ${Assets.missing.size}개 (F12 콘솔에서 목록 확인)` : '';
+  $('missing-note').textContent = Assets.missing.size ? T('MISSING_FILES_NOTE', [Assets.missing.size]) : '';
   if (s) {
     const main = s.rows.find(r => r.bgm === 'MAIN' && r.bgm_path) || s.rows.find(r => r.bgm_path && r.bgm_path !== 'STOP');
     const t = Layout.titleBgm; // 에디터 사운드 탭의 ‘메인 화면 BGM’ (없으면 메인 BGM)
@@ -1412,7 +1480,7 @@ async function readDropEntry(entry, prefix, out) {
 }
 
 async function useCustomFolder(entries, rootName) {
-  if (!entries.length) { toast('폴더가 비어 있어요.', true); return; }
+  if (!entries.length) { toast(T('TOAST_FOLDER_EMPTY'), true); return; }
   Sound.stop();
   Assets.useFolder(entries, rootName);
   Game.packId = 'custom-' + (rootName || 'pack');
@@ -1425,11 +1493,11 @@ async function useCustomFolder(entries, rootName) {
     showSplashError(res, true);
     return;
   }
-  log.info(`커스텀 폴더 ‘${rootName}’ 적용 (${entries.length}개 파일)`);
+  log.info(T('LOG_CUSTOM_APPLIED', [rootName, entries.length]));
   splashNeedsFolder = false; $('btn-splash-folder').hidden = true; $('splash-error').hidden = true;
   Sound.unlocked = true;
   enterTitle();
-  toast(`커스텀 폴더 ‘${rootName}’를 불러왔어요`);
+  toast(T('TOAST_CUSTOM_LOADED', [rootName]));
 }
 
 $('folder-input').addEventListener('change', (e) => {
@@ -1453,7 +1521,7 @@ function setupDrop(screen, overlay) {
     e.preventDefault();
     depth = 0; overlay.classList.remove('on');
     const items = [...(e.dataTransfer.items || [])].map(it => it.webkitGetAsEntry && it.webkitGetAsEntry()).filter(Boolean);
-    if (!items.length) { toast('폴더를 읽을 수 없어요. ‘폴더 연결’ 버튼을 사용하세요.', true); return; }
+    if (!items.length) { toast(T('TOAST_FOLDER_UNREADABLE'), true); return; }
     const out = [];
     let root = '커스텀';
     if (items.length === 1 && items[0].isDirectory) {
@@ -1533,7 +1601,7 @@ $('settings-back').addEventListener('click', (e) => { if (e.target === e.current
 $('btn-save').addEventListener('click', () => { Game.save(false); closeSettings(); });
 $('btn-to-title').addEventListener('click', async () => {
   if (Game.unsaved) {
-    const yes = await askConfirm('마지막으로 저장한 뒤의 진행은 저장되지 않아요.\n메인 화면으로 갈까요?', '메인 화면으로');
+    const yes = await askConfirm(T('CONFIRM_UNSAVED_TO_TITLE'), T('BTN_TO_MAIN'));
     if (!yes) return;
   }
   closeSettings();
@@ -1569,6 +1637,21 @@ $('speed-seg').addEventListener('click', (e) => {
   Settings.speed = Number(b.dataset.speed); saveSettings();
   document.querySelectorAll('#speed-seg button').forEach(x => x.classList.toggle('on', x === b));
 });
+$('lang-sel').addEventListener('change', (e) => setLang(e.target.value));
+// 언어를 바꾸면: 정적인 글은 applyI18n이, 그때그때 만드는 글은 여기서 다시 그림 (진행 상황은 그대로)
+function onLangChange() {
+  document.title = gameTitle();
+  $('title-text').textContent = gameTitle();
+  const scr = currentScreen();
+  if (scr === 'scr-title') updateTitleFoot();
+  if (scr === 'scr-splash') {
+    if (!$('splash-error').hidden && lastSplash) showSplashError(lastSplash[0], lastSplash[1]);
+    else $('splash-hint').textContent = T('SPLASH_HINT_START');
+  }
+  if (scr === 'scr-ending' && Game.script) $('ending-count').textContent = T('ENDINGS_COLLECTED', [[...Game.endings].length, Game.script.endingTotal]);
+  if (endingsOpen()) renderEndings();
+  $('lang-sel').innerHTML = langOptions();
+}
 $('btn-download').addEventListener('click', () => window.open(CONFIG.customPackUrl, '_blank', 'noopener'));
 
 /* ---------- 엔딩 목록 (본 엔딩만 보여 줌) ---------- */
@@ -1579,17 +1662,17 @@ function endingRows() {
     if (r.type !== 'end') continue;
     const key = r.set_flag || r.id; if (seen.has(key)) continue; seen.add(key);
     const m = /^\[(.+?)\]\s*(.*)$/.exec(r.text || '');
-    out.push({ key, kind: m ? m[1] : '엔딩', title: m ? m[2] : (r.text || ''), got: Game.endings.has(key) });
+    out.push({ key, kind: m ? m[1] : T('LABEL_ENDING'), title: m ? m[2] : (r.text || ''), got: Game.endings.has(key) });
   }
   return out;
 }
 function renderEndings() {
   const all = endingRows(), got = all.filter(e => e.got);
-  $('endings-count').textContent = `모은 엔딩 ${got.length} / ${all.length}`;
+  $('endings-count').textContent = T('ENDINGS_COLLECTED', [got.length, all.length]);
   $('endings-list').innerHTML = got.length
     ? got.map(e => `<li><small>${escapeHtml(e.kind)}</small><b>${escapeHtml(e.title)}</b></li>`).join('')
-      + (all.length > got.length ? `<li class="empty">아직 보지 못한 엔딩이 ${all.length - got.length}개 있어요.</li>` : '')
-    : '<li class="empty">아직 본 엔딩이 없어요.</li>';
+      + (all.length > got.length ? `<li class="empty">${T('ENDINGS_UNSEEN_COUNT', [all.length - got.length])}</li>` : '')
+    : `<li class="empty">${T('ENDINGS_NONE')}</li>`;
   $('btn-endings-clear').disabled = !got.length;
 }
 function openEndings() { renderEndings(); $('endings-back').classList.add('on'); $('btn-endings-close').focus(); }
@@ -1599,36 +1682,40 @@ $('btn-endings').addEventListener('click', openEndings);
 $('btn-endings-close').addEventListener('click', closeEndings);
 $('endings-back').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeEndings(); });
 $('btn-endings-clear').addEventListener('click', async () => {
-  const yes = await askConfirm('본 엔딩 기록을 모두 삭제할까요?\n삭제한 기록은 되돌릴 수 없어요.', '삭제');
+  const yes = await askConfirm(T('CONFIRM_CLEAR_ENDINGS'), T('BTN_DELETE'));
   if (!yes) return;
   Game.endings = new Set(); Game.saveEndings();
   renderEndings();
-  if (currentScreen() === 'scr-title' && Game.script) $('ending-progress').textContent = `모은 엔딩 0 / ${Game.script.endingTotal}`;
-  toast('엔딩 기록을 삭제했어요');
+  if (currentScreen() === 'scr-title' && Game.script) $('ending-progress').textContent = T('ENDINGS_COLLECTED_ZERO', [Game.script.endingTotal]);
+  toast(T('TOAST_ENDINGS_CLEARED'));
 });
 
 /* =========================================================
    시작
    ========================================================= */
 let splashNeedsFolder = false; // 대사를 하나도 못 읽은 상태: 메인 화면 대신 폴더 연결부터
+let lastSplash = null;
 function showSplashError(res, fromTitle) {
+  lastSplash = [res, fromTitle];
   const isFile = location.protocol === 'file:';
   let body;
   if (res.reason === 'csv' && isFile && Assets.mode === 'web') {
-    body = '<strong>게임 폴더를 연결해 주세요</strong>'
-      + '브라우저 보안 때문에 HTML 파일을 직접 열면 대사와 리소스를 읽지 못해요.\n'
-      + '오른쪽 아래 ‘폴더 연결’을 누르고 index.html이 들어 있는 폴더를 선택하세요.\n'
-      + '(폴더를 이 화면에 끌어다 놓아도 돼요.)';
+    body = `<strong>${T('SPLASH_CONNECT_TITLE')}</strong>`
+      + `${T('SPLASH_SECURITY')}
+`
+      + `${T('SPLASH_PRESS_CONNECT')}
+`
+      + T('SPLASH_DRAG_HINT');
   } else if (res.reason === 'csv') {
-    body = `<strong>대사 파일을 찾지 못했어요</strong>${escapeHtml(res.detail)}\n대사 CSV는 ${CONFIG.dialogCsv} 위치에 있어야 해요.`;
+    body = `<strong>${T('SPLASH_DIALOGUE_NOT_FOUND')}</strong>${T('SPLASH_CSV_LOCATION', [escapeHtml(res.detail), CONFIG.dialogCsv])}`;
   } else {
-    body = `<strong>대사 파일을 읽지 못했어요</strong>${escapeHtml(res.detail)}`;
+    body = `<strong>${T('SPLASH_DIALOGUE_READ_FAIL')}</strong>${escapeHtml(res.detail)}`;
   }
   $('splash-error').innerHTML = body;
   $('splash-error').hidden = false;
   splashNeedsFolder = !Game.script;
   $('btn-splash-folder').hidden = false;
-  $('splash-hint').textContent = splashNeedsFolder ? '폴더를 연결하면 메인 화면이 열려요' : '화면을 클릭하면 메인 화면으로 돌아가요';
+  $('splash-hint').textContent = splashNeedsFolder ? T('SPLASH_HINT_CONNECT') : T('SPLASH_HINT_BACK');
   showScreen('scr-splash');
 }
 function escapeHtml(s) { return String(s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c])); }
@@ -1658,7 +1745,7 @@ $('btn-splash-folder').addEventListener('click', (e) => {
   const res = await loadEverything();
   if (!res.ok) { showSplashError(res, false); return; }
   $('splash-error').hidden = true;
-  $('splash-hint').textContent = '화면을 클릭하면 시작해요';
+  $('splash-hint').textContent = T('SPLASH_HINT_START');
   showScreen('scr-splash');
 })();
 
@@ -1667,11 +1754,114 @@ window.VN = {
   Game, Assets, Settings,
   jump(id) {
     const i = Game.script && Game.script.index.get(id);
-    if (i == null) return console.warn('없는 ID:', id);
+    if (i == null) return console.warn(T('LOG_UNKNOWN_ID'), id);
     showScreen('scr-game'); Game.run(i);
   },
   flags() { return { run: [...Game.flags], endings: [...Game.endings] }; }
 };
+
+/* ======================= 로컬라이징 표 =======================
+   키: 대문자 영어 스트링 키 / 열: 언어 코드 (en, ko, ja, zh-Hans, zh-Hant). 새 언어는 각 키에 열을 추가 */
+function L10N_DATA() {
+  return {
+    ARIA_CLOSE_ENDINGS: { 'en': "Close ending list", 'ko': "엔딩 목록 닫기", 'ja': "エンディング一覧を閉じる", 'zh-Hans': "关闭结局列表", 'zh-Hant': "關閉結局列表" },
+    ARIA_CLOSE_SETTINGS: { 'en': "Close settings", 'ko': "설정 닫기", 'ja': "設定を閉じる", 'zh-Hans': "关闭设置", 'zh-Hant': "關閉設定" },
+    ARIA_OPEN_SETTINGS: { 'en': "Open settings", 'ko': "설정 열기", 'ja': "設定を開く", 'zh-Hans': "打开设置", 'zh-Hant': "開啟設定" },
+    BTN_CANCEL: { 'en': "Cancel", 'ko': "취소", 'ja': "キャンセル", 'zh-Hans': "取消", 'zh-Hant': "取消" },
+    BTN_CLEAR_ENDINGS: { 'en': "Delete Ending Records", 'ko': "엔딩 기록 삭제", 'ja': "エンディング記録を削除", 'zh-Hans': "删除结局记录", 'zh-Hant': "刪除結局紀錄" },
+    BTN_CONNECT_FOLDER: { 'en': "Connect Folder", 'ko': "폴더 연결", 'ja': "フォルダ接続", 'zh-Hans': "连接文件夹", 'zh-Hant': "連接資料夾" },
+    BTN_DELETE: { 'en': "Delete", 'ko': "삭제", 'ja': "削除", 'zh-Hans': "删除", 'zh-Hant': "刪除" },
+    BTN_DOWNLOAD_KIT: { 'en': "Download Customizing Kit", 'ko': "커스터마이징 파일 다운로드", 'ja': "カスタマイズ用ファイルをダウンロード", 'zh-Hans': "下载自定义文件", 'zh-Hant': "下載自訂檔案" },
+    BTN_ENDING_LIST: { 'en': "Ending List", 'ko': "엔딩 목록", 'ja': "エンディング一覧", 'zh-Hans': "结局列表", 'zh-Hant': "結局列表" },
+    BTN_LOAD: { 'en': "Load", 'ko': "불러오기", 'ja': "ロード", 'zh-Hans': "读取", 'zh-Hant': "讀取" },
+    BTN_LOAD_CUSTOM: { 'en': "Load custom folder", 'ko': "커스텀 폴더 불러오기", 'ja': "カスタムフォルダを読み込む", 'zh-Hans': "读取自定义文件夹", 'zh-Hant': "讀取自訂資料夾" },
+    BTN_NEW_GAME: { 'en': "New Game", 'ko': "새 게임", 'ja': "ニューゲーム", 'zh-Hans': "新游戏", 'zh-Hant': "新遊戲" },
+    BTN_OK: { 'en': "OK", 'ko': "확인", 'ja': "OK", 'zh-Hans': "确定", 'zh-Hant': "確定" },
+    BTN_RESET_PACK: { 'en': "Back to default resources", 'ko': "기본 리소스로 돌아가기", 'ja': "基本リソースに戻す", 'zh-Hans': "恢复默认资源", 'zh-Hant': "恢復預設資源" },
+    BTN_SAVE_GAME: { 'en': "Save", 'ko': "저장하기", 'ja': "セーブ", 'zh-Hans': "保存", 'zh-Hant': "存檔" },
+    BTN_SETTINGS: { 'en': "Settings", 'ko': "설정", 'ja': "設定", 'zh-Hans': "设置", 'zh-Hant': "設定" },
+    BTN_TO_MAIN: { 'en': "Main Screen", 'ko': "메인 화면으로", 'ja': "メイン画面へ", 'zh-Hans': "返回主界面", 'zh-Hant': "返回主畫面" },
+    CONFIRM_CLEAR_ENDINGS: { 'en': "Delete all seen ending records?\nDeleted records cannot be restored.", 'ko': "본 엔딩 기록을 모두 삭제할까요?\n삭제한 기록은 되돌릴 수 없어요.", 'ja': "見たエンディングの記録をすべて削除しますか?\n削除した記録は元に戻せません。", 'zh-Hans': "要删除所有已看结局的记录吗?\n删除的记录无法恢复。", 'zh-Hant': "要刪除所有已看結局的紀錄嗎?\n刪除的紀錄無法復原。" },
+    CONFIRM_UNSAVED_TO_TITLE: { 'en': "Progress after your last save will not be saved.\nGo to the main screen?", 'ko': "마지막으로 저장한 뒤의 진행은 저장되지 않아요.\n메인 화면으로 갈까요?", 'ja': "最後に保存した後の進行は保存されません。\nメイン画面に戻りますか?", 'zh-Hans': "上次存档之后的进度不会保存。\n要回到主界面吗?", 'zh-Hant': "上次存檔之後的進度不會儲存。\n要回到主畫面嗎?" },
+    CUSTOM_FOLDER_LABEL: { 'en': "Custom folder: {0}", 'ko': "커스텀 폴더: {0}", 'ja': "カスタムフォルダ: {0}", 'zh-Hans': "自定义文件夹: {0}", 'zh-Hant': "自訂資料夾: {0}" },
+    DROP_CUSTOM_FOLDER: { 'en': "Drop the custom folder here", 'ko': "여기에 커스텀 폴더를 놓으세요", 'ja': "ここにカスタムフォルダを置いてください", 'zh-Hans': "把自定义文件夹放到这里", 'zh-Hant': "把自訂資料夾放到這裡" },
+    DROP_GAME_FOLDER: { 'en': "Drop the game folder here", 'ko': "여기에 게임 폴더를 놓으세요", 'ja': "ここにゲームフォルダを置いてください", 'zh-Hans': "把游戏文件夹放到这里", 'zh-Hant': "把遊戲資料夾放到這裡" },
+    ENDINGS_COLLECTED: { 'en': "Endings collected {0} / {1}", 'ko': "모은 엔딩 {0} / {1}", 'ja': "集めたエンディング {0} / {1}", 'zh-Hans': "已收集结局 {0} / {1}", 'zh-Hant': "已收集結局 {0} / {1}" },
+    ENDINGS_COLLECTED_ZERO: { 'en': "Endings collected 0 / {0}", 'ko': "모은 엔딩 0 / {0}", 'ja': "集めたエンディング 0 / {0}", 'zh-Hans': "已收集结局 0 / {0}", 'zh-Hant': "已收集結局 0 / {0}" },
+    ENDINGS_NONE: { 'en': "No endings seen yet.", 'ko': "아직 본 엔딩이 없어요.", 'ja': "まだ見たエンディングがありません。", 'zh-Hans': "还没有看过的结局。", 'zh-Hant': "還沒有看過的結局。" },
+    ENDINGS_UNSEEN_COUNT: { 'en': "{0} endings not seen yet.", 'ko': "아직 보지 못한 엔딩이 {0}개 있어요.", 'ja': "まだ見ていないエンディングが{0}個あります。", 'zh-Hans': "还有 {0} 个结局没看过。", 'zh-Hant': "還有 {0} 個結局沒看過。" },
+    ERR_BRANCH_LOOP: { 'en': "Branches repeat endlessly. Check the next IDs of the branch rows.", 'ko': "분기가 끝없이 반복돼요. 분기 줄의 다음 ID를 확인하세요.", 'ja': "分岐が無限に繰り返されます。分岐行の次のIDを確認してください。", 'zh-Hans': "分支无限循环。请检查分支行的下一个 ID。", 'zh-Hant': "分支無限循環。請檢查分支列的下一個 ID。" },
+    ERR_CSV_EMPTY: { 'en': "The CSV is empty.", 'ko': "CSV가 비어 있어요.", 'ja': "CSVが空です。", 'zh-Hans': "CSV 是空的。", 'zh-Hant': "CSV 是空的。" },
+    ERR_CSV_MISSING_COLUMN: { 'en': "Row 1 of the CSV has no ‘{0}’ column. Check that you saved the [Dialogue] sheet as is.", 'ko': "CSV 1행에 ‘{0}’ 열이 없어요. [대사] 시트를 그대로 저장했는지 확인하세요.", 'ja': "CSVの1行目に「{0}」列がありません。[台詞]シートをそのまま保存したか確認してください。", 'zh-Hans': "CSV 第 1 行没有“{0}”列。请确认是否按原样保存了[台词]表。", 'zh-Hant': "CSV 第 1 列沒有「{0}」欄。請確認是否按原樣儲存了[台詞]工作表。" },
+    ERR_FILE_NOT_IN_FOLDER: { 'en': "{0} is not in the folder.", 'ko': "{0} 파일이 폴더에 없어요.", 'ja': "{0}がフォルダにありません。", 'zh-Hans': "文件夹中没有 {0}。", 'zh-Hant': "資料夾中沒有 {0}。" },
+    ERR_NEXT_ID_NOT_FOUND: { 'en': "Cannot find next ID ‘{1}’ of {0}.", 'ko': "{0}의 다음 ID ‘{1}’를 찾을 수 없어요.", 'ja': "{0}の次のID「{1}」が見つかりません。", 'zh-Hans': "找不到 {0} 的下一个 ID“{1}”。", 'zh-Hant': "找不到 {0} 的下一個 ID「{1}」。" },
+    ERR_NO_ENDING_ROW: { 'en': "The dialogue ended without an ending row. Check the next ID of the last row.", 'ko': "대사가 끝났는데 엔딩 줄이 없어요. 마지막 줄의 다음 ID를 확인하세요.", 'ja': "台詞が終わりましたがエンディング行がありません。最後の行の次のIDを確認してください。", 'zh-Hans': "台词已结束但没有结局行。请检查最后一行的下一个 ID。", 'zh-Hant': "台詞已結束但沒有結局列。請檢查最後一列的下一個 ID。" },
+    ERR_NO_VISIBLE_CHOICE: { 'en': "{0}: no choices are visible. Add at least one choice without a condition.", 'ko': "{0}: 보이는 선택지가 하나도 없어요. 조건 없는 선택지를 하나 이상 두세요.", 'ja': "{0}: 表示される選択肢がありません。条件のない選択肢を一つ以上置いてください。", 'zh-Hans': "{0}: 没有可显示的选项。请至少放一个没有条件的选项。", 'zh-Hant': "{0}: 沒有可顯示的選項。請至少放一個沒有條件的選項。" },
+    ERR_SAVE_POS_MISSING: { 'en': "The saved position ‘{0}’ is not in the dialogue. If you changed IDs, start a new game.", 'ko': "저장된 위치 ‘{0}’가 대사에 없어요. ID를 바꿨다면 새 게임으로 시작하세요.", 'ja': "保存した位置「{0}」が台詞にありません。IDを変えた場合は新しいゲームで始めてください。", 'zh-Hans': "存档位置“{0}”不在台词中。如果修改过 ID，请开始新游戏。", 'zh-Hant': "存檔位置「{0}」不在台詞中。如果修改過 ID，請開始新遊戲。" },
+    GAME_TITLE_DEFAULT: { 'en': "Game Title", 'ko': "게임 제목", 'ja': "ゲームタイトル", 'zh-Hans': "游戏标题", 'zh-Hant': "遊戲標題" },
+    LABEL_BGM_VOLUME: { 'en': "Music", 'ko': "배경음", 'ja': "BGM", 'zh-Hans': "背景音乐", 'zh-Hant': "背景音樂" },
+    LABEL_CHOICE: { 'en': "Choice", 'ko': "선택지", 'ja': "選択肢", 'zh-Hans': "选项", 'zh-Hant': "選項" },
+    LABEL_ENDING: { 'en': "Ending", 'ko': "엔딩", 'ja': "エンディング", 'zh-Hans': "结局", 'zh-Hant': "結局" },
+    LABEL_SFX_VOLUME: { 'en': "Sound FX", 'ko': "효과음", 'ja': "効果音", 'zh-Hans': "音效", 'zh-Hant': "音效" },
+    LABEL_TEXT_SPEED: { 'en': "Text speed", 'ko': "글자 속도", 'ja': "文字速度", 'zh-Hans': "文字速度", 'zh-Hant': "文字速度" },
+    LOADING_DIALOGUE: { 'en': "Loading dialogue", 'ko': "대사 불러오는 중", 'ja': "台詞を読み込み中", 'zh-Hans': "正在读取台词", 'zh-Hant': "正在讀取台詞" },
+    LOADING_FOLDER: { 'en': "Loading folder ‘{0}’", 'ko': "‘{0}’ 폴더 불러오는 중", 'ja': "フォルダ「{0}」を読み込み中", 'zh-Hans': "正在读取文件夹“{0}”", 'zh-Hant': "正在讀取資料夾「{0}」" },
+    LOADING_RESOURCES: { 'en': "Loading resources", 'ko': "리소스 불러오는 중", 'ja': "リソースを読み込み中", 'zh-Hans': "正在读取资源", 'zh-Hant': "正在讀取資源" },
+    LOG_BGM_NO_FILE: { 'en': "No file is set for BGM ‘{0}’, so the game continues without sound.", 'ko': "BGM ‘{0}’의 파일이 정해지지 않아 소리 없이 진행해요.", 'ja': "BGM「{0}」のファイルが決まっていないため、音なしで進行します。", 'zh-Hans': "BGM“{0}”没有指定文件，将无声音继续。", 'zh-Hant': "BGM「{0}」沒有指定檔案，將無聲音繼續。" },
+    LOG_BGM_PLAY_FAIL: { 'en': "BGM playback failed:", 'ko': "BGM 재생 실패:", 'ja': "BGMの再生に失敗:", 'zh-Hans': "BGM 播放失败:", 'zh-Hant': "BGM 播放失敗:" },
+    LOG_BRANCH_NEEDS: { 'en': "{0}: a branch row needs a condition flag and a next ID.", 'ko': "{0}: 분기 줄에는 조건 플래그와 다음 ID가 필요해요.", 'ja': "{0}: 分岐行には条件フラグと次のIDが必要です。", 'zh-Hans': "{0}: 分支行需要条件旗标和下一个 ID。", 'zh-Hant': "{0}: 分支列需要條件旗標和下一個 ID。" },
+    LOG_CASE_MISMATCH: { 'en': "Letter case differs: needed name ‘{0}’ / name in folder ‘{1}’", 'ko': "대소문자가 달라요: 필요한 이름 ‘{0}’ / 폴더에 있는 이름 ‘{1}’", 'ja': "大文字と小文字が違います: 必要な名前「{0}」/ フォルダの名前「{1}」", 'zh-Hans': "大小写不同: 需要的名称“{0}”/ 文件夹中的名称“{1}”", 'zh-Hant': "大小寫不同: 需要的名稱「{0}」/ 資料夾中的名稱「{1}」" },
+    LOG_CHOICE_NEEDS_QUESTION: { 'en': "{0}: right above a choice there must be a question line with an empty next ID.", 'ko': "{0}: 선택지 바로 위에는 다음 ID가 빈 질문 대사가 있어야 해요.", 'ja': "{0}: 選択肢のすぐ上には、次のIDが空の質問台詞が必要です。", 'zh-Hans': "{0}: 选项正上方必须有下一个 ID 为空的提问台词。", 'zh-Hant': "{0}: 選項正上方必須有下一個 ID 為空的提問台詞。" },
+    LOG_CHOICE_NO_NEXT: { 'en': "{0}: the choice has no next ID.", 'ko': "{0}: 선택지에 다음 ID가 없어요.", 'ja': "{0}: 選択肢に次のIDがありません。", 'zh-Hans': "{0}: 选项没有下一个 ID。", 'zh-Hant': "{0}: 選項沒有下一個 ID。" },
+    LOG_CHOICE_WITHOUT_QUESTION: { 'en': "{0}: reached choices without a question line, so they are skipped.", 'ko': "{0}: 질문 대사 없이 선택지에 도착해서 건너뛰어요.", 'ja': "{0}: 質問台詞なしで選択肢に着いたのでスキップします。", 'zh-Hans': "{0}: 没有提问台词就到达了选项，已跳过。", 'zh-Hant': "{0}: 沒有提問台詞就到達了選項，已略過。" },
+    LOG_CSV_FALLBACK: { 'en': "{0} was not found, so {1} is used as the dialogue file.", 'ko': "{0}이 없어서 {1}를 대사 파일로 사용해요.", 'ja': "{0}がないため、{1}を台詞ファイルとして使います。", 'zh-Hans': "没有 {0}，因此使用 {1} 作为台词文件。", 'zh-Hant': "沒有 {0}，因此使用 {1} 作為台詞檔案。" },
+    LOG_CSV_NOT_UTF8: { 'en': "The CSV was not UTF-8, so it was read again as CP949 (EUC-KR). Saving as ‘CSV UTF-8 (Comma delimited)’ in Excel is recommended.", 'ko': "CSV가 UTF-8이 아니어서 CP949(EUC-KR)로 다시 읽었어요. 엑셀에서 ‘CSV UTF-8(쉼표로 분리)’로 저장하는 걸 권장해요.", 'ja': "CSVがUTF-8ではなかったため、CP949(EUC-KR)で読み直しました。Excelでは「CSV UTF-8(コンマ区切り)」で保存することをおすすめします。", 'zh-Hans': "CSV 不是 UTF-8，已按 CP949(EUC-KR) 重新读取。建议在 Excel 中以“CSV UTF-8(逗号分隔)”保存。", 'zh-Hant': "CSV 不是 UTF-8，已按 CP949(EUC-KR) 重新讀取。建議在 Excel 中以「CSV UTF-8(逗號分隔)」儲存。" },
+    LOG_CSV_READ_FAIL: { 'en': "Could not read the dialogue CSV:", 'ko': "대사 CSV를 읽지 못했어요:", 'ja': "台詞CSVを読み込めませんでした:", 'zh-Hans': "无法读取台词 CSV:", 'zh-Hant': "無法讀取台詞 CSV:" },
+    LOG_CUSTOM_APPLIED: { 'en': "Custom folder ‘{0}’ applied ({1} files)", 'ko': "커스텀 폴더 ‘{0}’ 적용 ({1}개 파일)", 'ja': "カスタムフォルダ「{0}」を適用 ({1}個のファイル)", 'zh-Hans': "已应用自定义文件夹“{0}”({1} 个文件)", 'zh-Hant': "已套用自訂資料夾「{0}」({1} 個檔案)" },
+    LOG_DIALOGUE_LINES: { 'en': "{0} dialogue lines ({1})", 'ko': "대사 {0}줄 ({1})", 'ja': "台詞{0}行 ({1})", 'zh-Hans': "台词 {0} 行 ({1})", 'zh-Hant': "台詞 {0} 列 ({1})" },
+    LOG_DUPLICATE_ID: { 'en': "Duplicate ID: {0}", 'ko': "ID 중복: {0}", 'ja': "IDの重複: {0}", 'zh-Hans': "ID 重复: {0}", 'zh-Hant': "ID 重複: {0}" },
+    LOG_EMPTY_STATE_ON: { 'en': "{0}: the condition state is empty, so it is treated as ‘on’.", 'ko': "{0}: 조건 상태가 비어 있어 ‘켜짐’으로 처리해요.", 'ja': "{0}: 条件の状態が空なので「オン」として扱います。", 'zh-Hans': "{0}: 条件状态为空，按“开启”处理。", 'zh-Hant': "{0}: 條件狀態為空，按「開啟」處理。" },
+    LOG_FONT_DEFAULT: { 'en': "{0} not found → using the default font", 'ko': "{0} 없음 → 기본 글꼴 사용", 'ja': "{0}なし → 基本フォントを使用", 'zh-Hans': "没有 {0} → 使用默认字体", 'zh-Hant': "沒有 {0} → 使用預設字型" },
+    LOG_FONT_READ_FAIL: { 'en': "Could not read {0}, so the default font is used", 'ko': "{0}를 읽지 못해서 기본 글꼴을 써요", 'ja': "{0}を読み込めなかったため、基本フォントを使います", 'zh-Hans': "无法读取 {0}，使用默认字体", 'zh-Hant': "無法讀取 {0}，使用預設字型" },
+    LOG_ID_FORMAT_ORDER: { 'en': "Some rows are not in the ID format (S1-010), so the CSV row order is used as is.", 'ko': "ID 형식(S1-010)이 아닌 줄이 있어서 CSV의 행 순서를 그대로 사용해요.", 'ja': "ID形式(S1-010)ではない行があるため、CSVの行順をそのまま使います。", 'zh-Hans': "有些行不是 ID 格式(S1-010)，因此按 CSV 的行顺序使用。", 'zh-Hant': "有些列不是 ID 格式(S1-010)，因此按 CSV 的列順序使用。" },
+    LOG_IMAGE_READ_FAIL: { 'en': "Could not read {0} as an image.", 'ko': "{0}를 이미지로 읽지 못했어요.", 'ja': "{0}を画像として読み込めませんでした。", 'zh-Hans': "无法将 {0} 读取为图像。", 'zh-Hant': "無法將 {0} 讀取為圖片。" },
+    LOG_LAYOUT_READ_FAIL: { 'en': "Could not read {0}, so the default layout is used: {1}", 'ko': "{0}를 읽지 못해서 기본 배치를 써요: {1}", 'ja': "{0}を読み込めなかったため、基本の配置を使います: {1}", 'zh-Hans': "无法读取 {0}，使用默认布局: {1}", 'zh-Hant': "無法讀取 {0}，使用預設版面: {1}" },
+    LOG_MISSING_ANIM: { 'en': "[Missing resource] {0} (no .gif or .webp either)", 'ko': "[리소스 없음] {0} (.gif, .webp도 없음)", 'ja': "[リソースなし] {0} (.gif・.webpもなし)", 'zh-Hans': "[缺少资源] {0}(也没有 .gif、.webp)", 'zh-Hant': "[缺少資源] {0}(也沒有 .gif、.webp)" },
+    LOG_MISSING_FILES: { 'en': "{0} missing files:", 'ko': "빠진 파일 {0}개:", 'ja': "足りないファイル {0}個:", 'zh-Hans': "缺少 {0} 个文件:", 'zh-Hant': "缺少 {0} 個檔案:" },
+    LOG_MISSING_RESOURCE: { 'en': "[Missing resource] {0}", 'ko': "[리소스 없음] {0}", 'ja': "[リソースなし] {0}", 'zh-Hans': "[缺少资源] {0}", 'zh-Hant': "[缺少資源] {0}" },
+    LOG_NEXT_ID_MISSING: { 'en': "{0}: next ID ‘{1}’ does not exist.", 'ko': "{0}: 다음 ID ‘{1}’가 없어요.", 'ja': "{0}: 次のID「{1}」がありません。", 'zh-Hans': "{0}: 下一个 ID“{1}”不存在。", 'zh-Hant': "{0}: 下一個 ID「{1}」不存在。" },
+    LOG_NO_CUTSCENE: { 'en': "{0} not found → continuing without a cutscene", 'ko': "{0} 없음 → 컷씬 없이 진행", 'ja': "{0}なし → カットシーンなしで進行", 'zh-Hans': "没有 {0} → 不显示过场图继续", 'zh-Hant': "沒有 {0} → 不顯示過場圖繼續" },
+    LOG_NO_SOUND: { 'en': "[No sound] {0} → continuing without sound", 'ko': "[소리 없음] {0} → 소리 없이 진행", 'ja': "[音声なし] {0} → 音なしで進行", 'zh-Hans': "[无声音] {0} → 无声音继续", 'zh-Hant': "[無聲音] {0} → 無聲音繼續" },
+    LOG_UI_DEFAULT: { 'en': "{0} not found → using the default design", 'ko': "{0} 없음 → 기본 디자인 사용", 'ja': "{0}なし → 基本デザインを使用", 'zh-Hans': "没有 {0} → 使用默认设计", 'zh-Hant': "沒有 {0} → 使用預設設計" },
+    LOG_UNKNOWN_ID: { 'en': "No such ID:", 'ko': "없는 ID:", 'ja': "存在しないID:", 'zh-Hans': "不存在的 ID:", 'zh-Hant': "不存在的 ID:" },
+    LOG_UNKNOWN_STATE: { 'en': "{0}: unknown condition state ‘{1}’, treated as ‘on’.", 'ko': "{0}: 조건 상태 ‘{1}’를 몰라서 ‘켜짐’으로 처리해요.", 'ja': "{0}: 条件の状態「{1}」が分からないので「オン」として扱います。", 'zh-Hans': "{0}: 无法识别条件状态“{1}”，按“开启”处理。", 'zh-Hant': "{0}: 無法識別條件狀態「{1}」，按「開啟」處理。" },
+    LOG_UNKNOWN_TYPE_SKIP: { 'en': "{0}: unknown type ‘{1}’ → skipped", 'ko': "{0}: 알 수 없는 구분 ‘{1}’ → 건너뜀", 'ja': "{0}: 不明な区分「{1}」→ スキップ", 'zh-Hans': "{0}: 未知的类型“{1}”→ 已跳过", 'zh-Hant': "{0}: 未知的類型「{1}」→ 已略過" },
+    MISSING_FILES_NOTE: { 'en': "{0} missing files (see the list in the F12 console)", 'ko': "빠진 파일 {0}개 (F12 콘솔에서 목록 확인)", 'ja': "足りないファイル {0}個 (F12コンソールで一覧を確認)", 'zh-Hans': "缺少 {0} 个文件(在 F12 控制台查看列表)", 'zh-Hant': "缺少 {0} 個檔案(在 F12 主控台查看清單)" },
+    PLACEHOLDER_NO_FILE: { 'en': "File not found", 'ko': "파일 없음", 'ja': "ファイルなし", 'zh-Hans': "没有文件", 'zh-Hant': "沒有檔案" },
+    SAMPLE_GAME_TITLE: { 'en': "Eunha Express", 'ko': "은하 익스프레스", 'ja': "銀河エクスプレス", 'zh-Hans': "银河特快", 'zh-Hant': "銀河特快" },
+    SETTINGS_KIT_NOTE: { 'en': "Follow ReadMe_제작자용.txt in the downloaded files to change images and dialogue and make your own game.", 'ko': "받은 파일의 ReadMe_제작자용.txt를 따라 이미지와 대사를 바꿔 나만의 게임을 만들 수 있어요.", 'ja': "ダウンロードしたファイルの ReadMe_제작자용.txt に従って画像と台詞を変え、自分だけのゲームを作れます。", 'zh-Hans': "按照下载文件中的 ReadMe_제작자용.txt 替换图像和台词，就能制作属于自己的游戏。", 'zh-Hant': "按照下載檔案中的 ReadMe_제작자용.txt 替換圖片和台詞，就能製作屬於自己的遊戲。" },
+    SPEED_FAST: { 'en': "Fast", 'ko': "빠르게", 'ja': "速い", 'zh-Hans': "快", 'zh-Hant': "快" },
+    SPEED_INSTANT: { 'en': "Instant", 'ko': "즉시", 'ja': "瞬時", 'zh-Hans': "立即", 'zh-Hant': "立即" },
+    SPEED_NORMAL: { 'en': "Normal", 'ko': "보통", 'ja': "普通", 'zh-Hans': "普通", 'zh-Hant': "普通" },
+    SPEED_SLOW: { 'en': "Slow", 'ko': "느리게", 'ja': "遅い", 'zh-Hans': "慢", 'zh-Hant': "慢" },
+    SPLASH_CONNECT_TITLE: { 'en': "Please connect the game folder", 'ko': "게임 폴더를 연결해 주세요", 'ja': "ゲームフォルダを接続してください", 'zh-Hans': "请连接游戏文件夹", 'zh-Hant': "請連接遊戲資料夾" },
+    SPLASH_CSV_LOCATION: { 'en': "{0}\nThe dialogue CSV must be at {1}.", 'ko': "{0}\n대사 CSV는 {1} 위치에 있어야 해요.", 'ja': "{0}\n台詞CSVは {1} にある必要があります。", 'zh-Hans': "{0}\n台词 CSV 必须位于 {1}。", 'zh-Hant': "{0}\n台詞 CSV 必須位於 {1}。" },
+    SPLASH_DIALOGUE_NOT_FOUND: { 'en': "Could not find the dialogue file", 'ko': "대사 파일을 찾지 못했어요", 'ja': "台詞ファイルが見つかりませんでした", 'zh-Hans': "找不到台词文件", 'zh-Hant': "找不到台詞檔案" },
+    SPLASH_DIALOGUE_READ_FAIL: { 'en': "Could not read the dialogue file", 'ko': "대사 파일을 읽지 못했어요", 'ja': "台詞ファイルを読み込めませんでした", 'zh-Hans': "无法读取台词文件", 'zh-Hant': "無法讀取台詞檔案" },
+    SPLASH_DRAG_HINT: { 'en': "(You can also drag the folder onto this screen.)", 'ko': "(폴더를 이 화면에 끌어다 놓아도 돼요.)", 'ja': "(フォルダをこの画面にドラッグしてもかまいません。)", 'zh-Hans': "(也可以把文件夹拖到此画面上。)", 'zh-Hant': "(也可以把資料夾拖到此畫面上。)" },
+    SPLASH_HINT_BACK: { 'en': "Click the screen to return to the main screen", 'ko': "화면을 클릭하면 메인 화면으로 돌아가요", 'ja': "画面をクリックするとメイン画面に戻ります", 'zh-Hans': "点击画面返回主界面", 'zh-Hant': "點擊畫面返回主畫面" },
+    SPLASH_HINT_CONNECT: { 'en': "Connect a folder to open the main screen", 'ko': "폴더를 연결하면 메인 화면이 열려요", 'ja': "フォルダを接続するとメイン画面が開きます", 'zh-Hans': "连接文件夹后将打开主界面", 'zh-Hant': "連接資料夾後將開啟主畫面" },
+    SPLASH_HINT_START: { 'en': "Click the screen to start", 'ko': "화면을 클릭하면 시작해요", 'ja': "画面をクリックすると始まります", 'zh-Hans': "点击画面开始", 'zh-Hant': "點擊畫面開始" },
+    SPLASH_PRESS_CONNECT: { 'en': "Press ‘Connect Folder’ at the bottom right and select the folder that contains index.html.", 'ko': "오른쪽 아래 ‘폴더 연결’을 누르고 index.html이 들어 있는 폴더를 선택하세요.", 'ja': "右下の「フォルダ接続」を押して、index.htmlが入っているフォルダを選択してください。", 'zh-Hans': "请点击右下角的“连接文件夹”，选择包含 index.html 的文件夹。", 'zh-Hant': "請點擊右下角的「連接資料夾」，選擇包含 index.html 的資料夾。" },
+    SPLASH_SECURITY: { 'en': "For browser security, opening the HTML file directly cannot read the dialogue and resources.", 'ko': "브라우저 보안 때문에 HTML 파일을 직접 열면 대사와 리소스를 읽지 못해요.", 'ja': "ブラウザのセキュリティのため、HTMLファイルを直接開くと台詞とリソースを読み込めません。", 'zh-Hans': "出于浏览器安全限制，直接打开 HTML 文件无法读取台词和资源。", 'zh-Hant': "基於瀏覽器安全限制，直接開啟 HTML 檔案無法讀取台詞和資源。" },
+    TOAST_CUSTOM_LOADED: { 'en': "Loaded custom folder ‘{0}’", 'ko': "커스텀 폴더 ‘{0}’를 불러왔어요", 'ja': "カスタムフォルダ「{0}」を読み込みました", 'zh-Hans': "已读取自定义文件夹“{0}”", 'zh-Hant': "已讀取自訂資料夾「{0}」" },
+    TOAST_ENDINGS_CLEARED: { 'en': "Ending records deleted", 'ko': "엔딩 기록을 삭제했어요", 'ja': "エンディングの記録を削除しました", 'zh-Hans': "已删除结局记录", 'zh-Hant': "已刪除結局紀錄" },
+    TOAST_FOLDER_EMPTY: { 'en': "The folder is empty.", 'ko': "폴더가 비어 있어요.", 'ja': "フォルダが空です。", 'zh-Hans': "文件夹是空的。", 'zh-Hant': "資料夾是空的。" },
+    TOAST_FOLDER_UNREADABLE: { 'en': "Cannot read the folder. Use the ‘Connect Folder’ button.", 'ko': "폴더를 읽을 수 없어요. ‘폴더 연결’ 버튼을 사용하세요.", 'ja': "フォルダを読み込めません。「フォルダ接続」ボタンを使ってください。", 'zh-Hans': "无法读取文件夹。请使用“连接文件夹”按钮。", 'zh-Hant': "無法讀取資料夾。請使用「連接資料夾」按鈕。" },
+    TOAST_SAVED: { 'en': "Saved", 'ko': "저장했어요", 'ja': "保存しました", 'zh-Hans': "已保存", 'zh-Hant': "已儲存" },
+    TOAST_SAVE_FAIL: { 'en': "Could not save. Check your browser storage settings.", 'ko': "저장하지 못했어요. 브라우저 저장 공간 설정을 확인하세요.", 'ja': "保存できませんでした。ブラウザの保存領域の設定を確認してください。", 'zh-Hans': "无法保存。请检查浏览器存储设置。", 'zh-Hant': "無法儲存。請檢查瀏覽器儲存設定。" }
+  };
+}
 </script>
 </body>
 </html>
